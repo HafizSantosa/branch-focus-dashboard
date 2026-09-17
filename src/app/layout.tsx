@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Branch Fokus Carry Over Aug & Prio Sep 26",
+  title: "Fokus Prioritas 20 Branch",
   description: "Executive Dashboard Status Konstruksi, Status Go-Live, dan Port Plan vs Realisasi",
 };
 

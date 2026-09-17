@@ -407,7 +407,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
             <div>
               <div className="flex items-center gap-2 min-w-0">
                 <h1 className="text-sm sm:text-base lg:text-lg font-bold tracking-tight text-slate-800 whitespace-nowrap">
-                  Branch Fokus Carry Over Aug &amp; Prio Sep 26
+                  Fokus Prioritas 20 Branch
                 </h1>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block">
