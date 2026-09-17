@@ -67,7 +67,7 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
       for (const d of data) {
         if (d.statusKonstruksi === stageName) {
           if (isPort) {
-            const val = stageName === "05. Go Live" ? (d.portReal || d.portPlan) : d.portPlan;
+            const val = stageName === "05. Go Live" ? d.portReal : d.portPlan;
             if (d.pt === "PT2") pt2 += val;
             else if (d.pt === "PT3") pt3 += val;
           } else {
@@ -107,7 +107,7 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
         for (const d of subset) {
           if (condition(d)) {
             if (isPort) {
-              sum += isGl ? (d.portReal || d.portPlan) : d.portPlan;
+              sum += isGl ? d.portReal : d.portPlan;
             } else {
               sum += 1;
             }
@@ -158,7 +158,7 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
           for (const d of rows) {
             if (condition(d)) {
               if (isPort) {
-                sum += isGl ? (d.portReal || d.portPlan) : d.portPlan;
+                sum += isGl ? d.portReal : d.portPlan;
               } else {
                 sum += 1;
               }

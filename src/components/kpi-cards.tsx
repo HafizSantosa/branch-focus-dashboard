@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { FileText, Target, CheckCircle2, Rocket, Activity, TrendingDown } from "lucide-react";
+import { Target, ClipboardList, Truck, HardHat, Layers, Rocket } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { LopRecord } from "@/types/lop";
 import { formatNumber, formatPercent, sumBy } from "@/lib/utils";
@@ -17,48 +17,99 @@ export function KpiCards({ data }: KpiCardsProps) {
     const totalPortReal = sumBy(data, (d) => d.portReal);
     const realizationRate = totalPortPlan > 0 ? (totalPortReal / totalPortPlan) * 100 : 0;
 
-    const goLiveCount = data.filter((d) => d.statusKonstruksi === "05. Go Live").length;
-    const goLiveRate = totalLop > 0 ? (goLiveCount / totalLop) * 100 : 0;
+    let persiapanPort = 0;
+    let persiapanLop = 0;
+    let matdelPort = 0;
+    let matdelLop = 0;
+    let ogpPort = 0;
+    let ogpLop = 0;
+    let finishPort = 0;
+    let finishLop = 0;
+    let goLiveLop = 0;
 
-    const activeStages = ["01. Persiapan", "02. Material Delivery", "02. Matdel", "03. OGP Instalasi", "04. Finish Instalasi"];
-    const activeCount = data.filter((d) => activeStages.includes(d.statusKonstruksi)).length;
-    const activeRate = totalLop > 0 ? (activeCount / totalLop) * 100 : 0;
-
-    const dropCount = data.filter(
-      (d) => d.statusKonstruksi.startsWith("00.") || d.statusKonstruksi.startsWith("0.")
-    ).length;
-    const dropRate = totalLop > 0 ? (dropCount / totalLop) * 100 : 0;
+    for (const d of data) {
+      const s = d.statusKonstruksi;
+      if (s === "01. Persiapan") {
+        persiapanPort += d.portPlan;
+        persiapanLop += 1;
+      } else if (s === "02. Material Delivery" || s === "02. Matdel") {
+        matdelPort += d.portPlan;
+        matdelLop += 1;
+      } else if (s === "03. OGP Instalasi") {
+        ogpPort += d.portPlan;
+        ogpLop += 1;
+      } else if (s === "04. Finish Instalasi") {
+        finishPort += d.portPlan;
+        finishLop += 1;
+      } else if (s === "05. Go Live") {
+        goLiveLop += 1;
+      }
+    }
 
     return {
       totalLop,
       totalPortPlan,
       totalPortReal,
       realizationRate,
-      goLiveCount,
-      goLiveRate,
-      activeCount,
-      activeRate,
-      dropCount,
-      dropRate,
+      persiapanPort,
+      persiapanLop,
+      persiapanPct: totalPortPlan > 0 ? (persiapanPort / totalPortPlan) * 100 : 0,
+      matdelPort,
+      matdelLop,
+      matdelPct: totalPortPlan > 0 ? (matdelPort / totalPortPlan) * 100 : 0,
+      ogpPort,
+      ogpLop,
+      ogpPct: totalPortPlan > 0 ? (ogpPort / totalPortPlan) * 100 : 0,
+      finishPort,
+      finishLop,
+      finishPct: totalPortPlan > 0 ? (finishPort / totalPortPlan) * 100 : 0,
+      goLiveLop,
     };
   }, [data]);
 
   const cards = [
     {
-      title: "Total LOP",
-      count: formatNumber(metrics.totalLop),
+      title: "Port Plan",
+      count: formatNumber(metrics.totalPortPlan),
       total: undefined,
-      subtext: "",
-      icon: FileText,
+      subtext: `${formatNumber(metrics.totalLop)} LOP`,
+      icon: Target,
       color: "text-blue-600 bg-blue-50 border-blue-200",
       accent: "from-blue-500/10 to-transparent",
     },
     {
-      title: "Port Plan",
-      count: formatNumber(metrics.totalPortPlan),
-      total: undefined,
-      subtext: "",
-      icon: Target,
+      title: "Persiapan",
+      count: formatNumber(metrics.persiapanPort),
+      total: formatNumber(metrics.totalPortPlan),
+      subtext: `${formatPercent(metrics.persiapanPct)} (${formatNumber(metrics.persiapanLop)} LOP)`,
+      icon: ClipboardList,
+      color: "text-slate-600 bg-slate-100 border-slate-300",
+      accent: "from-slate-500/10 to-transparent",
+    },
+    {
+      title: "Material Delivery",
+      count: formatNumber(metrics.matdelPort),
+      total: formatNumber(metrics.totalPortPlan),
+      subtext: `${formatPercent(metrics.matdelPct)} (${formatNumber(metrics.matdelLop)} LOP)`,
+      icon: Truck,
+      color: "text-cyan-600 bg-cyan-50 border-cyan-200",
+      accent: "from-cyan-500/10 to-transparent",
+    },
+    {
+      title: "OGP Instalasi",
+      count: formatNumber(metrics.ogpPort),
+      total: formatNumber(metrics.totalPortPlan),
+      subtext: `${formatPercent(metrics.ogpPct)} (${formatNumber(metrics.ogpLop)} LOP)`,
+      icon: HardHat,
+      color: "text-amber-600 bg-amber-50 border-amber-200",
+      accent: "from-amber-500/10 to-transparent",
+    },
+    {
+      title: "Finish Instalasi",
+      count: formatNumber(metrics.finishPort),
+      total: formatNumber(metrics.totalPortPlan),
+      subtext: `${formatPercent(metrics.finishPct)} (${formatNumber(metrics.finishLop)} LOP)`,
+      icon: Layers,
       color: "text-indigo-600 bg-indigo-50 border-indigo-200",
       accent: "from-indigo-500/10 to-transparent",
     },
@@ -66,37 +117,10 @@ export function KpiCards({ data }: KpiCardsProps) {
       title: "Port Go Live",
       count: formatNumber(metrics.totalPortReal),
       total: formatNumber(metrics.totalPortPlan),
-      subtext: `${formatPercent(metrics.realizationRate)} port go live`,
-      icon: CheckCircle2,
+      subtext: `${formatPercent(metrics.realizationRate)} (${formatNumber(metrics.goLiveLop)} LOP)`,
+      icon: Rocket,
       color: "text-emerald-600 bg-emerald-50 border-emerald-200",
       accent: "from-emerald-500/10 to-transparent",
-    },
-    {
-      title: "Go Live",
-      count: formatNumber(metrics.goLiveCount),
-      total: formatNumber(metrics.totalLop),
-      subtext: `${formatPercent(metrics.goLiveRate)} (05. Go Live)`,
-      icon: Rocket,
-      color: "text-teal-600 bg-teal-50 border-teal-200",
-      accent: "from-teal-500/10 to-transparent",
-    },
-    {
-      title: "Pipeline Aktif",
-      count: formatNumber(metrics.activeCount),
-      total: formatNumber(metrics.totalLop),
-      subtext: `${formatPercent(metrics.activeRate)} dalam progres (01-04)`,
-      icon: Activity,
-      color: "text-amber-600 bg-amber-50 border-amber-200",
-      accent: "from-amber-500/10 to-transparent",
-    },
-    {
-      title: "Drop LOP",
-      count: formatNumber(metrics.dropCount),
-      total: formatNumber(metrics.totalLop),
-      subtext: `${formatPercent(metrics.dropRate)} Propose/Drop DBP`,
-      icon: TrendingDown,
-      color: "text-rose-600 bg-rose-50 border-rose-200",
-      accent: "from-rose-500/10 to-transparent",
     },
   ];
 
@@ -126,8 +150,8 @@ export function KpiCards({ data }: KpiCardsProps) {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-1 truncate min-h-[1rem]" title={c.subtext || undefined}>
-                {c.subtext || "\u00A0"}
+              <p className="text-xs text-slate-500 mt-1 truncate min-h-[1rem]" title={c.subtext}>
+                {c.subtext}
               </p>
             </CardContent>
           </Card>
