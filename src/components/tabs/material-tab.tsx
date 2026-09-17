@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { LopRecord } from "@/types/lop";
 import { formatNumber, formatPercent } from "@/lib/utils";
-import { CheckCircle2, Clock, HelpCircle, PackageCheck, AlertTriangle, Layers } from "lucide-react";
+import { CheckCircle2, Clock, PackageCheck, AlertTriangle, Layers } from "lucide-react";
 
 interface MaterialTabProps {
   data: LopRecord[];
@@ -211,7 +211,7 @@ export function MaterialTab({ data }: MaterialTabProps) {
   return (
     <div className="space-y-6">
       {/* Top KPI Cards for Material Readiness */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="glass-card p-3.5 border-l-4 border-l-blue-600">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase">Pipeline Aktif</span>
@@ -223,7 +223,7 @@ export function MaterialTab({ data }: MaterialTabProps) {
             {formatNumber(kpis.totalPort)}
           </div>
           <div className="text-xs text-slate-500 mt-0.5">
-            {formatNumber(kpis.totalLop)} LOP (Tahap 01 s/d 04)
+            {formatNumber(kpis.totalLop)} LOP (Tahap Persiapan s/d Finish Instalasi)
           </div>
         </Card>
 
@@ -244,7 +244,7 @@ export function MaterialTab({ data }: MaterialTabProps) {
 
         <Card className="glass-card p-3.5 border-l-4 border-l-amber-500">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-800 uppercase">Material NY Ready</span>
+            <span className="text-xs font-semibold text-amber-800 uppercase">Material Not Yet Ready</span>
             <div className="p-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
               <Clock className="w-3.5 h-3.5" />
             </div>
@@ -257,20 +257,6 @@ export function MaterialTab({ data }: MaterialTabProps) {
           </div>
         </Card>
 
-        <Card className="glass-card p-3.5 border-l-4 border-l-slate-400">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Belum Terdata (#N/A)</span>
-            <div className="p-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-300">
-              <HelpCircle className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="text-2xl font-extrabold text-slate-700 mt-1 tabular-nums">
-            {formatNumber(kpis.unassignedPort)}
-          </div>
-          <div className="text-xs text-slate-500 mt-0.5">
-            {formatNumber(kpis.unassignedLop)} LOP
-          </div>
-        </Card>
       </div>
 
       {/* Control Bar: Unit Toggle & Stage Filter Pills */}
