@@ -195,19 +195,28 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
     return sortedBranches;
   }, [data, isPort]);
 
-  // 4. Kendala Distribution (Donut)
+  // 4. Drop / Kendala Distribution (Donut)
   const kendalaData = useMemo(() => {
     const map = new Map<string, number>();
     let totalWithKendala = 0;
     for (const r of data) {
-      const k = r.groupingKendala.trim();
-      if (k) {
+      const s = r.statusKonstruksi || "";
+      const isDropStatus =
+        s.startsWith("00.") ||
+        s.startsWith("0.") ||
+        s.toLowerCase().includes("drop") ||
+        s.toLowerCase().includes("kendala");
+
+      if (isDropStatus) {
         const addVal = isPort ? r.portPlan : 1;
+        let k = r.groupingKendala.trim();
+        if (!k) {
+          k = s === "0. Drop DBP" ? "Drop DBP" : "Kendala Belum Terklasifikasi";
+        }
         map.set(k, (map.get(k) || 0) + addVal);
         totalWithKendala += addVal;
       }
     }
-
     const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
     const top = sorted.slice(0, 7);
     const remainder = sorted.slice(7);
@@ -615,13 +624,13 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
         <Card className="glass-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-bold text-slate-800 flex items-center justify-between">
-              <span>Distribusi Kendala ({unitLabel})</span>
+              <span>Drop / Kendala ({unitLabel})</span>
               <span className="text-xs font-normal text-slate-500">
-                {formatNumber(kendalaData.total)} {unitLabel} Terkendala
+                {formatNumber(kendalaData.total)} {unitLabel} Drop / Kendala
               </span>
             </CardTitle>
             <CardDescription className="text-xs text-slate-500">
-              Pengelompokan jenis kendala lapangan berdasarkan volume {unitLabel}
+              Pengelompokan jenis kendala pada proyek berstatus Drop &amp; Propose Drop
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-2">
