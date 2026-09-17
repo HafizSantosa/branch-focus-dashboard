@@ -464,7 +464,7 @@ export function DetailTab({ data }: DetailTabProps) {
                 </div>
 
                 <div className="p-3 rounded-lg bg-emerald-50/50 border border-emerald-100">
-                  <span className="text-emerald-600 block mb-1">Port Realisasi</span>
+                  <span className="text-emerald-600 block mb-1">Port Go Live</span>
                   <div className="text-lg font-bold text-emerald-900">{formatNumber(selectedRecord.portReal)}</div>
                 </div>
               </div>

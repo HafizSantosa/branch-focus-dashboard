@@ -20,7 +20,7 @@ export function KpiCards({ data }: KpiCardsProps) {
     const goLiveCount = data.filter((d) => d.statusKonstruksi === "05. Go Live").length;
     const goLiveRate = totalLop > 0 ? (goLiveCount / totalLop) * 100 : 0;
 
-    const activeStages = ["01. Persiapan", "02. Matdel", "03. OGP Instalasi", "04. Finish Instalasi"];
+    const activeStages = ["01. Persiapan", "02. Material Delivery", "02. Matdel", "03. OGP Instalasi", "04. Finish Instalasi"];
     const activeCount = data.filter((d) => activeStages.includes(d.statusKonstruksi)).length;
     const activeRate = totalLop > 0 ? (activeCount / totalLop) * 100 : 0;
 
@@ -63,10 +63,10 @@ export function KpiCards({ data }: KpiCardsProps) {
       accent: "from-indigo-500/10 to-transparent",
     },
     {
-      title: "Port Realisasi",
+      title: "Port Go Live",
       count: formatNumber(metrics.totalPortReal),
       total: formatNumber(metrics.totalPortPlan),
-      subtext: `${formatPercent(metrics.realizationRate)} realisasi port`,
+      subtext: `${formatPercent(metrics.realizationRate)} port go live`,
       icon: CheckCircle2,
       color: "text-emerald-600 bg-emerald-50 border-emerald-200",
       accent: "from-emerald-500/10 to-transparent",

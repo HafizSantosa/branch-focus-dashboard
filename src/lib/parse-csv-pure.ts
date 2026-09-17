@@ -206,7 +206,10 @@ export function parseCsvString(csvContent: string): {
     const prioritas20Branch = cleanString(row[18]);
     const branchFokus =
       branchFokusRaw === "Y" || prioritas20Branch.toLowerCase().includes("20 branch");
-    const statusKonstruksi = cleanString(row[20]);
+    let statusKonstruksi = cleanString(row[20]);
+    if (statusKonstruksi === "02. Matdel" || statusKonstruksi === "02. Material Delivery") {
+      statusKonstruksi = "02. Material Delivery";
+    }
 
     const mitra = cleanString(row[10]);
     if (prioFlag) prioFlags.add(prioFlag);
@@ -247,7 +250,7 @@ export function parseCsvString(csvContent: string): {
   // Pre-sort filter options
   const statusOrder = [
     "01. Persiapan",
-    "02. Matdel",
+    "02. Material Delivery",
     "03. OGP Instalasi",
     "04. Finish Instalasi",
     "05. Go Live",

@@ -89,7 +89,7 @@ export function PortTab({ data }: PortTabProps) {
             </span>
           </CardTitle>
           <CardDescription className="text-xs text-slate-500">
-            Perbandingan total kapasitas Port Plan dengan Port Realisasi fisik yang telah terpasang
+            Perbandingan total kapasitas Port Plan dengan Port Go Live fisik yang telah terpasang
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-2">
@@ -114,7 +114,7 @@ export function PortTab({ data }: PortTabProps) {
                               <span className="font-semibold">{formatNumber(item?.portPlan || 0)}</span>
                             </div>
                             <div className="flex items-center justify-between text-emerald-300">
-                              <span>Port Realisasi:</span>
+                              <span>Port Go Live:</span>
                               <span className="font-semibold">{formatNumber(item?.portReal || 0)}</span>
                             </div>
                             <div className="flex items-center justify-between text-amber-300 pt-1 border-t border-slate-800">
@@ -130,7 +130,7 @@ export function PortTab({ data }: PortTabProps) {
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
                 <Bar dataKey="portPlan" name="Port Plan" fill="#3b82f6" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                <Bar dataKey="portReal" name="Port Realisasi" fill="#10b981" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                <Bar dataKey="portReal" name="Port Go Live" fill="#10b981" radius={[4, 4, 0, 0]} isAnimationActive={false} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -150,7 +150,7 @@ export function PortTab({ data }: PortTabProps) {
                   <span className="font-semibold text-slate-800 tabular-nums">{formatNumber(item.portPlan)}</span>
                 </div>
                 <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-slate-500">Real:</span>
+                  <span className="text-slate-500">Go Live:</span>
                   <span className="font-semibold text-emerald-700 tabular-nums">{formatNumber(item.portReal)}</span>
                 </div>
               </div>
@@ -199,7 +199,7 @@ export function PortTab({ data }: PortTabProps) {
                               <span className="font-semibold">{formatNumber(item?.portPlan || 0)}</span>
                             </div>
                             <div className="flex items-center justify-between text-emerald-300">
-                              <span>Port Realisasi:</span>
+                              <span>Port Go Live:</span>
                               <span className="font-semibold">{formatNumber(item?.portReal || 0)}</span>
                             </div>
                             <div className="flex items-center justify-between text-amber-300 pt-1 border-t border-slate-800">
@@ -215,7 +215,7 @@ export function PortTab({ data }: PortTabProps) {
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
                 <Bar dataKey="portPlan" name="Port Plan" fill="#3b82f6" radius={[0, 4, 4, 0]} isAnimationActive={false} />
-                <Bar dataKey="portReal" name="Port Realisasi" fill="#10b981" radius={[0, 4, 4, 0]} isAnimationActive={false} />
+                <Bar dataKey="portReal" name="Port Go Live" fill="#10b981" radius={[0, 4, 4, 0]} isAnimationActive={false} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -24,7 +24,8 @@ interface KonstruksiTabProps {
 
 const STAGE_COLORS: Record<string, string> = {
   "01. Persiapan": "#94a3b8", // Slate 400
-  "02. Matdel": "#64748b", // Slate 500
+  "02. Material Delivery": "#64748b", // Slate 500
+  "02. Matdel": "#64748b",
   "03. OGP Instalasi": "#f59e0b", // Amber 500
   "04. Finish Instalasi": "#3b82f6", // Blue 500
   "05. Go Live": "#10b981", // Emerald 500
@@ -52,7 +53,7 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
   const pipelineData = useMemo(() => {
     const stages = [
       "01. Persiapan",
-      "02. Matdel",
+      "02. Material Delivery",
       "03. OGP Instalasi",
       "04. Finish Instalasi",
       "05. Go Live",
@@ -116,7 +117,7 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
       };
 
       const persiapan = getVal((d) => d.statusKonstruksi === "01. Persiapan");
-      const matdel = getVal((d) => d.statusKonstruksi === "02. Matdel");
+      const matdel = getVal((d) => d.statusKonstruksi === "02. Material Delivery" || d.statusKonstruksi === "02. Matdel");
       const ogp = getVal((d) => d.statusKonstruksi === "03. OGP Instalasi");
       const finish = getVal((d) => d.statusKonstruksi === "04. Finish Instalasi");
       const golive = getVal((d) => d.statusKonstruksi === "05. Go Live", true);
@@ -167,7 +168,7 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
         };
 
         const persiapan = getVal((d) => d.statusKonstruksi === "01. Persiapan");
-        const matdel = getVal((d) => d.statusKonstruksi === "02. Matdel");
+        const matdel = getVal((d) => d.statusKonstruksi === "02. Material Delivery" || d.statusKonstruksi === "02. Matdel");
         const ogp = getVal((d) => d.statusKonstruksi === "03. OGP Instalasi");
         const finish = getVal((d) => d.statusKonstruksi === "04. Finish Instalasi");
         const golive = getVal((d) => d.statusKonstruksi === "05. Go Live", true);
@@ -459,9 +460,9 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
                   />
                   <Bar
                     dataKey="matdel"
-                    name="02. Matdel"
+                    name="02. Material Delivery"
                     stackId="a"
-                    fill={STAGE_COLORS["02. Matdel"]}
+                    fill={STAGE_COLORS["02. Material Delivery"]}
                     isAnimationActive={false}
                   />
                   <Bar
@@ -571,9 +572,9 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
                   />
                   <Bar
                     dataKey="matdel"
-                    name="02. Matdel"
+                    name="02. Material Delivery"
                     stackId="b"
-                    fill={STAGE_COLORS["02. Matdel"]}
+                    fill={STAGE_COLORS["02. Material Delivery"]}
                     isAnimationActive={false}
                   />
                   <Bar

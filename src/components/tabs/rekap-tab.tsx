@@ -108,7 +108,7 @@ export function RekapTab({ data }: RekapTabProps) {
         (s) => s === "00. Propose Drop" || s.toLowerCase().includes("kendala")
       );
       const persiapan = calcStage((s) => s === "01. Persiapan");
-      const matdel = calcStage((s) => s === "02. Matdel");
+      const matdel = calcStage((s) => s === "02. Material Delivery" || s === "02. Matdel");
       const ogp = calcStage((s) => s === "03. OGP Instalasi");
       const finish = calcStage((s) => s === "04. Finish Instalasi");
 
@@ -265,7 +265,7 @@ export function RekapTab({ data }: RekapTabProps) {
 
     if (viewMode === "detail") {
       csvRows.push(
-        "AREA,BRANCH,0. Drop DBP (PT2),0. Drop DBP (PT3),0. Drop DBP (Total),00. Kendala (PT2),00. Kendala (PT3),00. Kendala (Total),01. Persiapan (PT2),01. Persiapan (PT3),01. Persiapan (Total),02. Matdel (PT2),02. Matdel (PT3),02. Matdel (Total),03. OGP (PT2),03. OGP (PT3),03. OGP (Total),04. Finish (PT2),04. Finish (PT3),04. Finish (Total),05. Go Live (PT2),05. Go Live (PT3),05. Go Live (Total),Total (PT2),Total (PT3),Total Keseluruhan,Ach %"
+        "AREA,BRANCH,0. Drop DBP (PT2),0. Drop DBP (PT3),0. Drop DBP (Total),00. Kendala (PT2),00. Kendala (PT3),00. Kendala (Total),01. Persiapan (PT2),01. Persiapan (PT3),01. Persiapan (Total),02. Material Delivery (PT2),02. Material Delivery (PT3),02. Material Delivery (Total),03. OGP (PT2),03. OGP (PT3),03. OGP (Total),04. Finish (PT2),04. Finish (PT3),04. Finish (Total),05. Go Live (PT2),05. Go Live (PT3),05. Go Live (Total),Total (PT2),Total (PT3),Total Keseluruhan,Ach %"
       );
 
       for (const grp of areaGroups) {
@@ -286,7 +286,7 @@ export function RekapTab({ data }: RekapTabProps) {
       );
     } else {
       csvRows.push(
-        "AREA,BRANCH,0. Drop DBP,00. Kendala,01. Persiapan,02. Matdel,03. OGP Instalasi,04. Finish Instalasi,05. Go Live,Total Keseluruhan,Ach %"
+        "AREA,BRANCH,0. Drop DBP,00. Kendala,01. Persiapan,02. Material Delivery,03. OGP Instalasi,04. Finish Instalasi,05. Go Live,Total Keseluruhan,Ach %"
       );
       for (const grp of areaGroups) {
         for (const b of grp.branches) {
@@ -352,7 +352,7 @@ export function RekapTab({ data }: RekapTabProps) {
 
         <Card className="glass-card p-3 border-l-4 border-l-emerald-600">
           <div className="text-[11px] font-semibold text-slate-500 uppercase">
-            05. Go Live (Realisasi)
+            05. Go Live (Port Go Live)
           </div>
           <div className="text-xl font-extrabold text-emerald-700 mt-0.5 tabular-nums">
             {formatNumber(kpis.goLivePort)}
@@ -494,7 +494,7 @@ export function RekapTab({ data }: RekapTabProps) {
                   colSpan={viewMode === "detail" ? 3 : 1}
                   className="py-1.5 px-2 border-r border-slate-300 bg-sky-100"
                 >
-                  02. Matdel
+                  02. Material Delivery
                 </th>
                 <th
                   colSpan={viewMode === "detail" ? 3 : 1}
