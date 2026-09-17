@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Target, ClipboardList, Truck, HardHat, Layers, Rocket } from "lucide-react";
+import { Target, TrendingDown, ClipboardList, Truck, HardHat, Layers, Rocket } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { LopRecord } from "@/types/lop";
 import { formatNumber, formatPercent, sumBy } from "@/lib/utils";
@@ -17,6 +17,8 @@ export function KpiCards({ data }: KpiCardsProps) {
     const totalPortReal = sumBy(data, (d) => d.portReal);
     const realizationRate = totalPortPlan > 0 ? (totalPortReal / totalPortPlan) * 100 : 0;
 
+    let dropPort = 0;
+    let dropLop = 0;
     let persiapanPort = 0;
     let persiapanLop = 0;
     let matdelPort = 0;
@@ -27,9 +29,18 @@ export function KpiCards({ data }: KpiCardsProps) {
     let finishLop = 0;
     let goLivePort = 0;
     let goLiveLop = 0;
+
     for (const d of data) {
-      const s = d.statusKonstruksi;
-      if (s === "01. Persiapan") {
+      const s = d.statusKonstruksi || "";
+      if (
+        s.startsWith("00.") ||
+        s.startsWith("0.") ||
+        s.toLowerCase().includes("drop") ||
+        s.toLowerCase().includes("kendala")
+      ) {
+        dropPort += d.portPlan;
+        dropLop += 1;
+      } else if (s === "01. Persiapan") {
         persiapanPort += d.portPlan;
         persiapanLop += 1;
       } else if (s === "02. Material Delivery" || s === "02. Matdel") {
@@ -52,6 +63,9 @@ export function KpiCards({ data }: KpiCardsProps) {
       totalPortPlan,
       totalPortReal,
       realizationRate,
+      dropPort,
+      dropLop,
+      dropPct: totalPortPlan > 0 ? (dropPort / totalPortPlan) * 100 : 0,
       persiapanPort,
       persiapanLop,
       persiapanPct: totalPortPlan > 0 ? (persiapanPort / totalPortPlan) * 100 : 0,
@@ -79,6 +93,15 @@ export function KpiCards({ data }: KpiCardsProps) {
       icon: Target,
       color: "text-blue-600 bg-blue-50 border-blue-200",
       accent: "from-blue-500/10 to-transparent",
+    },
+    {
+      title: "Drop / Kendala",
+      count: formatNumber(metrics.dropPort),
+      total: formatNumber(metrics.totalPortPlan),
+      subtext: `${formatPercent(metrics.dropPct)} (${formatNumber(metrics.dropLop)} LOP)`,
+      icon: TrendingDown,
+      color: "text-rose-600 bg-rose-50 border-rose-200",
+      accent: "from-rose-500/10 to-transparent",
     },
     {
       title: "Persiapan",
@@ -128,7 +151,7 @@ export function KpiCards({ data }: KpiCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3">
       {cards.map((c, i) => {
         const Icon = c.icon;
         return (
@@ -136,24 +159,24 @@ export function KpiCards({ data }: KpiCardsProps) {
             <div
               className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl ${c.accent} rounded-bl-full pointer-events-none`}
             />
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
+            <CardContent className="p-3 sm:p-3.5">
+              <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 truncate mr-1">
                   {c.title}
                 </span>
                 <div className={`p-1.5 rounded-lg border shrink-0 ${c.color}`}>
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5" />
                 </div>
               </div>
-              <div className="flex items-baseline gap-1 text-xl font-bold tracking-tight text-slate-800 tabular-nums">
+              <div className="flex items-baseline gap-1 text-lg sm:text-xl font-bold tracking-tight text-slate-800 tabular-nums">
                 <span>{c.count}</span>
                 {c.total && (
-                  <span className="text-xs font-normal text-slate-400">
+                  <span className="text-[11px] font-normal text-slate-400">
                     / {c.total}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-1 truncate min-h-[1rem]" title={c.subtext}>
+              <p className="text-[11px] text-slate-500 mt-1 truncate min-h-[1rem]" title={c.subtext}>
                 {c.subtext}
               </p>
             </CardContent>
