@@ -49,6 +49,7 @@ export const DEFAULT_GOOGLE_SHEET_URL =
 export const DEFAULT_FILTER_OPTIONS: FilterOptions = {
   prioFlag: [],
   pt: [],
+  mitra: [],
   area: [],
   regional: [],
   branch: [],
@@ -77,6 +78,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
   const [activeFilterOptions, setActiveFilterOptions] = useState<FilterOptions>(() => ({
     prioFlag: initialFilterOptions?.prioFlag || [],
     pt: initialFilterOptions?.pt || [],
+    mitra: initialFilterOptions?.mitra || [],
     area: initialFilterOptions?.area || [],
     regional: initialFilterOptions?.regional || [],
     branch: initialFilterOptions?.branch || [],
@@ -98,6 +100,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
     prioFlag: [],
     pt: [],
     area: [],
+    mitra: [],
     regional: [],
     branch: [],
     statusKonstruksi: [],
@@ -131,6 +134,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
               setActiveFilterOptions({
                 prioFlag: parsed.filterOptions.prioFlag || [],
                 pt: parsed.filterOptions.pt || [],
+                mitra: parsed.filterOptions.mitra || [],
                 area: parsed.filterOptions.area || [],
                 regional: parsed.filterOptions.regional || [],
                 branch: parsed.filterOptions.branch || [],
@@ -188,6 +192,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
       setActiveFilterOptions({
         prioFlag: parsed.filterOptions?.prioFlag || [],
         pt: parsed.filterOptions?.pt || [],
+        mitra: parsed.filterOptions?.mitra || [],
         area: parsed.filterOptions?.area || [],
         regional: parsed.filterOptions?.regional || [],
         branch: parsed.filterOptions?.branch || [],
@@ -268,6 +273,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
       if (filterState?.prioFlag && filterState.prioFlag.length > 0 && !filterState.prioFlag.includes(r.prioFlag))
         return false;
       if (filterState?.pt && filterState.pt.length > 0 && !filterState.pt.includes(r.pt)) return false;
+      if (filterState?.mitra && filterState.mitra.length > 0 && !filterState.mitra.includes(r.mitra)) return false;
       if (filterState?.area && filterState.area.length > 0 && !filterState.area.includes(r.area)) return false;
       if (filterState?.regional && filterState.regional.length > 0 && !filterState.regional.includes(r.regional))
         return false;
@@ -298,6 +304,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
       prioFlag: [],
       pt: [],
       area: [],
+      mitra: [],
       regional: [],
       branch: [],
       statusKonstruksi: [],
@@ -321,6 +328,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
     }[] = [];
     (filterState?.prioFlag || []).forEach((v) => chips.push({ label: v, key: "prioFlag", val: v }));
     (filterState?.pt || []).forEach((v) => chips.push({ label: v, key: "pt", val: v }));
+    (filterState?.mitra || []).forEach((v) => chips.push({ label: v, key: "mitra", val: v }));
     (filterState?.area || []).forEach((v) => chips.push({ label: v, key: "area", val: v }));
     (filterState?.regional || []).forEach((v) => chips.push({ label: v, key: "regional", val: v }));
     (filterState?.branch || []).forEach((v) => chips.push({ label: v, key: "branch", val: v }));

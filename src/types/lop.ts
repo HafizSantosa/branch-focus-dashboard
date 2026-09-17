@@ -12,6 +12,7 @@ export interface LopRecord {
   prioFlag: string; // "Prio September" | "Prio Agustus"
   activeFlag: string; // "Y" | "N"
   branchFokus: boolean;
+  prioritas20Branch?: string;
   statusKonstruksi: string;
   statusMaterial: string;
   statusGL: string;
@@ -26,6 +27,7 @@ export interface LopRecord {
 export type FilterState = {
   prioFlag: string[];
   pt: string[];
+  mitra: string[];
   area: string[];
   regional: string[];
   branch: string[];

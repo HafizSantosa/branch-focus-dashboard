@@ -156,6 +156,7 @@ export function parseCsvString(csvContent: string): {
       filterOptions: {
         prioFlag: [],
         pt: [],
+        mitra: [],
         area: [],
         regional: [],
         branch: [],
@@ -177,6 +178,7 @@ export function parseCsvString(csvContent: string): {
   const records: LopRecord[] = [];
   const prioFlags = new Set<string>();
   const pts = new Set<string>();
+  const mitras = new Set<string>();
   const areas = new Set<string>();
   const regionals = new Set<string>();
   const branches = new Set<string>();
@@ -201,11 +203,15 @@ export function parseCsvString(csvContent: string): {
     const prioFlag = cleanString(row[13]);
     const activeFlag = cleanString(row[16]).toUpperCase();
     const branchFokusRaw = cleanString(row[17]).toUpperCase();
-    const branchFokus = branchFokusRaw === "Y";
+    const prioritas20Branch = cleanString(row[18]);
+    const branchFokus =
+      branchFokusRaw === "Y" || prioritas20Branch.toLowerCase().includes("20 branch");
     const statusKonstruksi = cleanString(row[20]);
 
+    const mitra = cleanString(row[10]);
     if (prioFlag) prioFlags.add(prioFlag);
     if (pt) pts.add(pt);
+    if (mitra) mitras.add(mitra);
     if (area && area !== "UNKNOWN") areas.add(area);
     if (regional) regionals.add(regional);
     if (branch) branches.add(branch);
@@ -226,6 +232,7 @@ export function parseCsvString(csvContent: string): {
       prioFlag,
       activeFlag,
       branchFokus,
+      prioritas20Branch,
       statusKonstruksi,
       statusMaterial: cleanString(row[21]),
       planGL: parseDateToIso(row[25]),
@@ -260,6 +267,7 @@ export function parseCsvString(csvContent: string): {
   const filterOptions: FilterOptions = {
     prioFlag: Array.from(prioFlags).sort(),
     pt: Array.from(pts).sort(),
+    mitra: Array.from(mitras).sort(),
     area: Array.from(areas).sort(),
     regional: Array.from(regionals).sort(),
     branch: Array.from(branches).sort(),

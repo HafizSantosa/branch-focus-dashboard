@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Filter, RotateCcw, ChevronDown, ChevronLeft, Sparkles, Building2, MapPin, Layers, Flag, HardHat } from "lucide-react";
+import { Filter, RotateCcw, ChevronDown, ChevronLeft, Sparkles, Building2, MapPin, Layers, Flag, HardHat, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -57,6 +57,7 @@ export function Sidebar({
     return (
       (filterState?.prioFlag?.length || 0) > 0 ||
       (filterState?.pt?.length || 0) > 0 ||
+      (filterState?.mitra?.length || 0) > 0 ||
       (filterState?.area?.length || 0) > 0 ||
       (filterState?.regional?.length || 0) > 0 ||
       (filterState?.branch?.length || 0) > 0 ||
@@ -198,6 +199,44 @@ export function Sidebar({
                       checked={checked}
                       onCheckedChange={() => toggleArrayFilter("pt", item)}
                       className="border-slate-600 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                    />
+                    <span>{item}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </details>
+
+          <Separator className="bg-slate-800" />
+
+          {/* 3. Mitra Lapangan */}
+          <details open className="group">
+            <summary className="flex items-center justify-between text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer list-none py-1 hover:text-white">
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-teal-400" />
+                <span>Mitra Lapangan</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                {(filterState?.mitra?.length || 0) > 0 && (
+                  <span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-1.5 py-0.2 rounded-full">
+                    {filterState.mitra.length}
+                  </span>
+                )}
+                <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180 text-slate-400" />
+              </div>
+            </summary>
+            <div className="mt-2 space-y-1.5 pl-2">
+              {(filterOptions?.mitra || []).map((item) => {
+                const checked = (filterState?.mitra || []).includes(item);
+                return (
+                  <label
+                    key={item}
+                    className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer py-0.5"
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleArrayFilter("mitra", item)}
+                      className="border-slate-600 data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                     />
                     <span>{item}</span>
                   </label>

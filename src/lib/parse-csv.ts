@@ -1,4 +1,4 @@
-import { LopRecord, FilterOptions } from "@/types/lop";
+import type { LopRecord, FilterOptions } from "@/types/lop";
 import { parseCsvString, normalizeGoogleSheetUrl, BRANCH_TO_AREA } from "./parse-csv-pure";
 
 export { parseCsvString, normalizeGoogleSheetUrl, BRANCH_TO_AREA };
@@ -19,6 +19,7 @@ export async function parseCsvData(): Promise<{ records: LopRecord[]; filterOpti
         filterOptions: {
           prioFlag: [],
           pt: [],
+          mitra: [],
           area: [],
           regional: [],
           branch: [],
@@ -36,6 +37,7 @@ export async function parseCsvData(): Promise<{ records: LopRecord[]; filterOpti
       filterOptions: {
         prioFlag: [],
         pt: [],
+        mitra: [],
         area: [],
         regional: [],
         branch: [],
