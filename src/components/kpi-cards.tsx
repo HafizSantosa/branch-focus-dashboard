@@ -25,8 +25,8 @@ export function KpiCards({ data }: KpiCardsProps) {
     let ogpLop = 0;
     let finishPort = 0;
     let finishLop = 0;
+    let goLivePort = 0;
     let goLiveLop = 0;
-
     for (const d of data) {
       const s = d.statusKonstruksi;
       if (s === "01. Persiapan") {
@@ -42,6 +42,7 @@ export function KpiCards({ data }: KpiCardsProps) {
         finishPort += d.portPlan;
         finishLop += 1;
       } else if (s === "05. Go Live") {
+        goLivePort += d.portReal;
         goLiveLop += 1;
       }
     }
@@ -63,7 +64,9 @@ export function KpiCards({ data }: KpiCardsProps) {
       finishPort,
       finishLop,
       finishPct: totalPortPlan > 0 ? (finishPort / totalPortPlan) * 100 : 0,
+      goLivePort,
       goLiveLop,
+      goLivePct: totalPortPlan > 0 ? (goLivePort / totalPortPlan) * 100 : 0,
     };
   }, [data]);
 
@@ -115,9 +118,9 @@ export function KpiCards({ data }: KpiCardsProps) {
     },
     {
       title: "Port Go Live",
-      count: formatNumber(metrics.totalPortReal),
+      count: formatNumber(metrics.goLivePort),
       total: formatNumber(metrics.totalPortPlan),
-      subtext: `${formatPercent(metrics.realizationRate)} (${formatNumber(metrics.goLiveLop)} LOP)`,
+      subtext: `${formatPercent(metrics.goLivePct)} (${formatNumber(metrics.goLiveLop)} LOP)`,
       icon: Rocket,
       color: "text-emerald-600 bg-emerald-50 border-emerald-200",
       accent: "from-emerald-500/10 to-transparent",
