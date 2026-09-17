@@ -19,6 +19,7 @@ import {
   Table as TableIcon,
   PanelLeftClose,
   PanelLeft,
+  PackageCheck,
 } from "lucide-react";
 import { LopRecord, FilterState, FilterOptions } from "@/types/lop";
 import { Sidebar } from "@/components/sidebar";
@@ -40,6 +41,7 @@ import { GoLiveTab } from "@/components/tabs/golive-tab";
 import { PortTab } from "@/components/tabs/port-tab";
 import { DetailTab } from "@/components/tabs/detail-tab";
 import { RekapTab } from "@/components/tabs/rekap-tab";
+import { MaterialTab } from "@/components/tabs/material-tab";
 import { parseCsvString, normalizeGoogleSheetUrl } from "@/lib/parse-csv-pure";
 import { formatNumber } from "@/lib/utils";
 
@@ -200,11 +202,9 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
       });
       setSheetUrl(rawUrl);
 
-      const nowStr = new Date().toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const nowStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
       setLastSyncTime(nowStr);
 
       // Save to localStorage
@@ -425,7 +425,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
                 className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[11px] font-medium py-1 px-2.5 flex items-center gap-1.5 shadow-2xs"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Live Google Sheet {lastSyncTime && `(${lastSyncTime})`}</span>
+                <span>Live Google Sheet {lastSyncTime && `(${lastSyncTime.replace(/\./g, ":")})`}</span>
               </Badge>
             </div>
 
@@ -543,6 +543,14 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
                 </TabsTrigger>
 
                 <TabsTrigger
+                  value="material"
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3.5 py-1.5 text-xs font-medium flex items-center gap-2 transition-all"
+                >
+                  <PackageCheck className="w-3.5 h-3.5" />
+                  <span>Kesiapan Material</span>
+                </TabsTrigger>
+
+                <TabsTrigger
                   value="golive"
                   className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3.5 py-1.5 text-xs font-medium flex items-center gap-2 transition-all"
                 >
@@ -579,6 +587,10 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
             <TabsContent value="rekap" className="mt-0 focus-visible:outline-none">
               <RekapTab data={filteredData} />
             </TabsContent>
+            <TabsContent value="material" className="mt-0 focus-visible:outline-none">
+              <MaterialTab data={filteredData} />
+            </TabsContent>
+
             <TabsContent value="golive" className="mt-0 focus-visible:outline-none">
               <GoLiveTab data={filteredData} />
             </TabsContent>
