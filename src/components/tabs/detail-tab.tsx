@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useAuth } from "@/components/auth-provider";
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ interface DetailTabProps {
 }
 
 export function DetailTab({ data }: DetailTabProps) {
+  const { isAdmin } = useAuth();
   const [sortField, setSortField] = useState<keyof LopRecord>("ihldLopId");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(0);
@@ -210,15 +212,17 @@ export function DetailTab({ data }: DetailTabProps) {
             </select>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            className="h-8 text-xs bg-white text-slate-700 hover:bg-slate-50 border-slate-300 font-medium flex items-center gap-1.5 shadow-xs"
-          >
-            <Download className="w-3.5 h-3.5 text-blue-600" />
-            <span>Unduh CSV (Filtered)</span>
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              className="h-8 text-xs bg-white text-slate-700 hover:bg-slate-50 border-slate-300 font-medium flex items-center gap-1.5 shadow-xs"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-600" />
+              <span>Unduh CSV (Filtered)</span>
+            </Button>
+          )}
         </div>
       </div>
 

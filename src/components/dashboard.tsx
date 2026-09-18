@@ -20,6 +20,11 @@ import {
   PanelLeftClose,
   PanelLeft,
   PackageCheck,
+  LogOut,
+  ShieldCheck,
+  Eye,
+  Users,
+  KeyRound,
 } from "lucide-react";
 import { LopRecord, FilterState, FilterOptions } from "@/types/lop";
 import { Sidebar } from "@/components/sidebar";
@@ -44,6 +49,7 @@ import { RekapTab } from "@/components/tabs/rekap-tab";
 import { MaterialTab } from "@/components/tabs/material-tab";
 import { parseCsvString, normalizeGoogleSheetUrl } from "@/lib/parse-csv-pure";
 import { formatNumber } from "@/lib/utils";
+import { useAuth, logout } from "@/components/auth-provider";
 
 export const DEFAULT_GOOGLE_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1-gPTbg9lJpow7Ir5iU7OGNFQIHoZ0Mja5IuLpGpIW0g/edit?usp=sharing";
@@ -73,6 +79,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ initialData, initialFilterOptions }: DashboardProps) {
+  const { name: userName, isAdmin } = useAuth();
   // Live Google Sheet Data State
   const [records, setRecords] = useState<LopRecord[]>(() =>
     Array.isArray(initialData) ? initialData : []
@@ -446,21 +453,23 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
               </span>
             </Button>
 
-            {/* Settings Dialog Button */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                setInputUrl(sheetUrl);
-                setSyncError(null);
-                setSyncSuccess(null);
-                setIsSettingsOpen(true);
-              }}
-              className="h-8 w-8 bg-white border-slate-300 text-slate-600 hover:text-slate-900"
-              title="Pengaturan Google Spreadsheet"
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
+            {/* Settings Dialog Button — Admin only */}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  setInputUrl(sheetUrl);
+                  setSyncError(null);
+                  setSyncSuccess(null);
+                  setIsSettingsOpen(true);
+                }}
+                className="h-8 w-8 bg-white border-slate-300 text-slate-600 hover:text-slate-900"
+                title="Pengaturan Google Spreadsheet"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+            )}
 
             {/* Search Bar */}
             <div className="relative w-36 sm:w-60">
@@ -480,6 +489,49 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
                   <X className="w-3 h-3" />
                 </button>
               )}
+            </div>
+
+            {/* User Badge + Actions */}
+            <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-slate-200">
+              <div className="flex flex-col items-end leading-none">
+                <span className="text-[11px] font-semibold text-slate-700 max-w-[120px] truncate">{userName}</span>
+                <span className="flex items-center gap-1 mt-0.5">
+                  {isAdmin ? (
+                    <ShieldCheck className="w-3 h-3 text-blue-600" />
+                  ) : (
+                    <Eye className="w-3 h-3 text-slate-400" />
+                  )}
+                  <span className={`text-[10px] font-medium ${isAdmin ? "text-blue-600" : "text-slate-400"}`}>
+                    {isAdmin ? "Admin" : "Viewer"}
+                  </span>
+                </span>
+              </div>
+              {/* Change Password */}
+              <a
+                href="/change-password"
+                title="Ganti Password"
+                className="h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+              </a>
+              {/* Admin Panel — admin only */}
+              {isAdmin && (
+                <a
+                  href="/admin/users"
+                  title="Manajemen Pengguna"
+                  className="h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 text-slate-400 hover:text-blue-600 transition-colors"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                </a>
+              )}
+              {/* Logout */}
+              <button
+                onClick={logout}
+                title="Keluar"
+                className="h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-300 text-slate-400 hover:text-rose-600 transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </header>

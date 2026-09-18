@@ -3,9 +3,9 @@ services:
     build: .
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
+    restart: unless-stopped
     environment:
-      - WATCHPACK_POLLING=true
+      - NODE_ENV=production
+      - NEXTAUTH_URL=http://YOUR_VPS_IP:3000
+      - NEXTAUTH_SECRET=CHANGE_THIS_TO_A_RANDOM_64_CHAR_STRING
+      - AUTH_USERS=[{"id":"1","username":"admin","password":"BCRYPT_HASH_HERE","role":"admin"},{"id":"2","username":"viewer","password":"BCRYPT_HASH_HERE","role":"viewer"}]

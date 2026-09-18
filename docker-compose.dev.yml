@@ -1,0 +1,19 @@
+# Development only — hot reload with volume mounts.
+# Usage: docker compose -f docker-compose.dev.yml up
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    env_file:
+      - .env.local
+    environment:
+      - WATCHPACK_POLLING=true
+      - AUTH_USERS_FILE=/app/users.json
+      - DB_PATH=/app/data/users.db

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useAuth } from "@/components/auth-provider";
 import {
   ResponsiveContainer,
   BarChart,
@@ -62,6 +63,7 @@ function getEtaHeatmapClass(val: number): string {
 }
 
 export function MaterialTab({ data }: MaterialTabProps) {
+  const { isAdmin } = useAuth();
   const [unit, setUnit] = useState<"port" | "lop">("port");
   const [stageFilter, setStageFilter] = useState<string>("ALL");
   const isPort = unit === "port";
@@ -708,15 +710,17 @@ export function MaterialTab({ data }: MaterialTabProps) {
             </CardDescription>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportEtaCsv}
-            className="h-8 text-xs font-medium bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-xs flex items-center gap-1.5 self-start sm:self-auto"
-          >
-            <Download className="w-3.5 h-3.5 text-blue-600" />
-            <span>Unduh Plan ETA CSV</span>
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportEtaCsv}
+              className="h-8 text-xs font-medium bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-xs flex items-center gap-1.5 self-start sm:self-auto"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-600" />
+              <span>Unduh Plan ETA CSV</span>
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
