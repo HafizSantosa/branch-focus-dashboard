@@ -28,6 +28,18 @@ const ACTIVE_STAGES = [
   "03. OGP Instalasi",
   "04. Finish Instalasi",
 ];
+const ALLOWED_ETA_DATES = [
+  "20/09",
+  "23/09",
+  "25/09",
+  "26/09",
+  "27/09",
+  "30/09",
+  "05/10",
+  "06/10",
+  "14/10",
+];
+
 
 function normalizeStage(stage: string): string {
   const s = (stage || "").trim();
@@ -218,26 +230,15 @@ export function MaterialTab({ data }: MaterialTabProps) {
       .slice(0, 50);
   }, [activeRecords]);
 
-  // 5. Plan ETA Matrix computation (Regional x Date)
+  // 5. Plan ETA Matrix computation (Regional x Date) following user's 9 ETA dates
   const etaTableData = useMemo(() => {
-    const dateSet = new Set<string>();
-    for (const d of activeRecords) {
-      if (d.planEta) dateSet.add(d.planEta);
-    }
+    const dates = ALLOWED_ETA_DATES;
 
-    // Sort dates chronologically: day/month
-    const sortedDates = Array.from(dateSet).sort((a, b) => {
-      const [dayA, monthA] = a.split("/").map(Number);
-      const [dayB, monthB] = b.split("/").map(Number);
-      if (monthA !== monthB) return monthA - monthB;
-      return dayA - dayB;
-    });
-
-    // Group by Area -> Regional
+    // Group by Area -> Regional across all data rows that have planEta in ALLOWED_ETA_DATES
     const areaMap = new Map<string, Map<string, Record<string, number>>>();
 
-    for (const d of activeRecords) {
-      if (!d.planEta || !d.regional) continue;
+    for (const d of data) {
+      if (!d.planEta || !dates.includes(d.planEta) || !d.regional) continue;
       const area = d.area || "UNKNOWN";
       const reg = d.regional;
       const p = d.portPlan || 0;
@@ -257,6 +258,7 @@ export function MaterialTab({ data }: MaterialTabProps) {
     }[] = [];
 
     const grandTotalByDate: Record<string, number> = {};
+    dates.forEach((d) => (grandTotalByDate[d] = 0));
     let grandTotalOverall = 0;
 
     for (const area of areaOrder) {
@@ -265,16 +267,19 @@ export function MaterialTab({ data }: MaterialTabProps) {
 
       const regList: { regional: string; byDate: Record<string, number>; total: number }[] = [];
       const subtotalByDate: Record<string, number> = {};
+      dates.forEach((d) => (subtotalByDate[d] = 0));
       let subtotalOverall = 0;
 
       for (const [reg, byDate] of Array.from(regMap.entries())) {
-        const regTotal = Object.values(byDate).reduce((a, b) => a + b, 0);
-        regList.push({ regional: reg, byDate, total: regTotal });
-
+        let regTotal = 0;
         for (const [d, val] of Object.entries(byDate)) {
-          subtotalByDate[d] = (subtotalByDate[d] || 0) + val;
-          grandTotalByDate[d] = (grandTotalByDate[d] || 0) + val;
+          if (dates.includes(d)) {
+            regTotal += val;
+            subtotalByDate[d] = (subtotalByDate[d] || 0) + val;
+            grandTotalByDate[d] = (grandTotalByDate[d] || 0) + val;
+          }
         }
+        regList.push({ regional: reg, byDate, total: regTotal });
         subtotalOverall += regTotal;
         grandTotalOverall += regTotal;
       }
@@ -289,11 +294,11 @@ export function MaterialTab({ data }: MaterialTabProps) {
     }
 
     return {
-      dates: sortedDates,
+      dates,
       groups,
       grandTotal: { byDate: grandTotalByDate, total: grandTotalOverall },
     };
-  }, [activeRecords]);
+  }, [data]);
 
   // Export Plan ETA table to CSV
   const handleExportEtaCsv = () => {
