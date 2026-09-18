@@ -12,10 +12,11 @@ import {
   CartesianGrid,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LopRecord } from "@/types/lop";
 import { formatNumber, formatPercent } from "@/lib/utils";
-import { CheckCircle2, Clock, PackageCheck, AlertTriangle, Layers } from "lucide-react";
+import { CheckCircle2, Clock, PackageCheck, AlertTriangle, Layers, CalendarClock, Download } from "lucide-react";
 
 interface MaterialTabProps {
   data: LopRecord[];
@@ -41,10 +42,16 @@ function normalizeMaterialStatus(status: string): "Ready" | "NY Ready" | "Belum 
   return "Belum Terdata";
 }
 
+function getEtaHeatmapClass(val: number): string {
+  if (val >= 2000) return "bg-[#c26d24] text-white font-extrabold";
+  if (val >= 800) return "bg-[#e2b078] text-slate-900 font-bold";
+  if (val > 0) return "bg-[#faedd8] text-slate-800 font-semibold";
+  return "";
+}
+
 export function MaterialTab({ data }: MaterialTabProps) {
   const [unit, setUnit] = useState<"port" | "lop">("port");
   const [stageFilter, setStageFilter] = useState<string>("ALL");
-
   const isPort = unit === "port";
   const unitLabel = isPort ? "Port" : "LOP";
 
@@ -170,7 +177,10 @@ export function MaterialTab({ data }: MaterialTabProps) {
 
   // 3. Top Branches with Material Bottleneck (NY Ready)
   const branchBottlenecks = useMemo(() => {
-    const branchMap = new Map<string, { nyReadyPort: number; nyReadyLop: number; totalPort: number; totalLop: number; area: string }>();
+    const branchMap = new Map<
+      string,
+      { nyReadyPort: number; nyReadyLop: number; totalPort: number; totalLop: number; area: string }
+    >();
 
     for (const d of activeRecords) {
       if (!d.branch) continue;
@@ -207,6 +217,122 @@ export function MaterialTab({ data }: MaterialTabProps) {
       .filter((d) => normalizeMaterialStatus(d.statusMaterial) === "NY Ready")
       .slice(0, 50);
   }, [activeRecords]);
+
+  // 5. Plan ETA Matrix computation (Regional x Date)
+  const etaTableData = useMemo(() => {
+    const dateSet = new Set<string>();
+    for (const d of activeRecords) {
+      if (d.planEta) dateSet.add(d.planEta);
+    }
+
+    // Sort dates chronologically: day/month
+    const sortedDates = Array.from(dateSet).sort((a, b) => {
+      const [dayA, monthA] = a.split("/").map(Number);
+      const [dayB, monthB] = b.split("/").map(Number);
+      if (monthA !== monthB) return monthA - monthB;
+      return dayA - dayB;
+    });
+
+    // Group by Area -> Regional
+    const areaMap = new Map<string, Map<string, Record<string, number>>>();
+
+    for (const d of activeRecords) {
+      if (!d.planEta || !d.regional) continue;
+      const area = d.area || "UNKNOWN";
+      const reg = d.regional;
+      const p = d.portPlan || 0;
+
+      if (!areaMap.has(area)) areaMap.set(area, new Map());
+      const regMap = areaMap.get(area)!;
+      if (!regMap.has(reg)) regMap.set(reg, {});
+      const dateCounts = regMap.get(reg)!;
+      dateCounts[d.planEta] = (dateCounts[d.planEta] || 0) + p;
+    }
+
+    const areaOrder = ["AREA 1", "AREA 2", "AREA 3", "AREA 4"];
+    const groups: {
+      area: string;
+      regionals: { regional: string; byDate: Record<string, number>; total: number }[];
+      subtotal: { byDate: Record<string, number>; total: number };
+    }[] = [];
+
+    const grandTotalByDate: Record<string, number> = {};
+    let grandTotalOverall = 0;
+
+    for (const area of areaOrder) {
+      const regMap = areaMap.get(area);
+      if (!regMap || regMap.size === 0) continue;
+
+      const regList: { regional: string; byDate: Record<string, number>; total: number }[] = [];
+      const subtotalByDate: Record<string, number> = {};
+      let subtotalOverall = 0;
+
+      for (const [reg, byDate] of Array.from(regMap.entries())) {
+        const regTotal = Object.values(byDate).reduce((a, b) => a + b, 0);
+        regList.push({ regional: reg, byDate, total: regTotal });
+
+        for (const [d, val] of Object.entries(byDate)) {
+          subtotalByDate[d] = (subtotalByDate[d] || 0) + val;
+          grandTotalByDate[d] = (grandTotalByDate[d] || 0) + val;
+        }
+        subtotalOverall += regTotal;
+        grandTotalOverall += regTotal;
+      }
+
+      regList.sort((a, b) => a.regional.localeCompare(b.regional));
+
+      groups.push({
+        area,
+        regionals: regList,
+        subtotal: { byDate: subtotalByDate, total: subtotalOverall },
+      });
+    }
+
+    return {
+      dates: sortedDates,
+      groups,
+      grandTotal: { byDate: grandTotalByDate, total: grandTotalOverall },
+    };
+  }, [activeRecords]);
+
+  // Export Plan ETA table to CSV
+  const handleExportEtaCsv = () => {
+    const headers = ["Regional", ...etaTableData.dates, "Total"];
+    const csvRows = [headers.join(",")];
+
+    for (const grp of etaTableData.groups) {
+      for (const r of grp.regionals) {
+        const rowVals = [
+          `"${r.regional}"`,
+          ...etaTableData.dates.map((d) => r.byDate[d] || 0),
+          r.total,
+        ];
+        csvRows.push(rowVals.join(","));
+      }
+      const subVals = [
+        `"${grp.area} Total"`,
+        ...etaTableData.dates.map((d) => grp.subtotal.byDate[d] || 0),
+        grp.subtotal.total,
+      ];
+      csvRows.push(subVals.join(","));
+    }
+
+    const grandVals = [
+      `"TOTAL"`,
+      ...etaTableData.dates.map((d) => etaTableData.grandTotal.byDate[d] || 0),
+      etaTableData.grandTotal.total,
+    ];
+    csvRows.push(grandVals.join(","));
+
+    const csvContent = "\uFEFF" + csvRows.join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Plan_ETA_Material_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
@@ -564,6 +690,129 @@ export function MaterialTab({ data }: MaterialTabProps) {
           </CardContent>
         </Card>
       </div>
+      {/* Plan ETA Table by Regional and Area */}
+      <Card className="glass-card overflow-hidden">
+        <CardHeader className="pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
+          <div>
+            <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+              <CalendarClock className="w-4 h-4 text-amber-600" />
+              <span>Tabel Rencana Kedatangan Material (Plan ETA)</span>
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              Distribusi jadwal estimasi kedatangan material (Port) per regional dan area operasional
+            </CardDescription>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportEtaCsv}
+            className="h-8 text-xs font-medium bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-xs flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <Download className="w-3.5 h-3.5 text-blue-600" />
+            <span>Unduh Plan ETA CSV</span>
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px] border-collapse">
+              <thead>
+                <tr className="text-xs border-b border-slate-300">
+                  <th className="py-2.5 px-3 text-left font-bold text-white bg-[#1e293b] border-r border-slate-700 min-w-[170px]">
+                    Regional
+                  </th>
+                  {etaTableData.dates.map((d) => (
+                    <th
+                      key={d}
+                      className="py-2.5 px-2 text-center font-bold text-white bg-[#b45309] border-r border-amber-800 min-w-[65px]"
+                    >
+                      {d}
+                    </th>
+                  ))}
+                  <th className="py-2.5 px-3 text-right font-extrabold text-white bg-[#1e293b] min-w-[90px]">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {etaTableData.groups.map((grp) => (
+                  <div key={grp.area} style={{ display: "contents" }}>
+                    {grp.regionals.map((r) => (
+                      <tr
+                        key={r.regional}
+                        className="border-b border-slate-200/80 hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="py-2 px-3 font-semibold text-slate-800 bg-white border-r border-slate-200 uppercase whitespace-nowrap">
+                          {r.regional}
+                        </td>
+                        {etaTableData.dates.map((d) => {
+                          const val = r.byDate[d] || 0;
+                          return (
+                            <td
+                              key={d}
+                              className={`py-1.5 px-2 text-center border-r border-slate-200 tabular-nums ${getEtaHeatmapClass(
+                                val
+                              )}`}
+                            >
+                              {val > 0 ? formatNumber(val) : ""}
+                            </td>
+                          );
+                        })}
+                        <td className="py-2 px-3 text-right font-bold text-slate-900 bg-slate-50 border-slate-200 tabular-nums">
+                          {formatNumber(r.total)}
+                        </td>
+                      </tr>
+                    ))}
+
+                    {/* Area Subtotal Row */}
+                    <tr className="bg-slate-100/90 border-y-2 border-slate-300 font-bold text-slate-900">
+                      <td className="py-2 px-3 font-extrabold text-slate-900 bg-slate-100 border-r border-slate-300 uppercase whitespace-nowrap">
+                        {grp.area} Total
+                      </td>
+                      {etaTableData.dates.map((d) => {
+                        const val = grp.subtotal.byDate[d] || 0;
+                        return (
+                          <td
+                            key={d}
+                            className="py-2 px-2 text-center font-extrabold text-slate-900 bg-slate-100 border-r border-slate-300 tabular-nums"
+                          >
+                            {val > 0 ? formatNumber(val) : ""}
+                          </td>
+                        );
+                      })}
+                      <td className="py-2 px-3 text-right font-black text-slate-950 bg-slate-200 border-slate-300 tabular-nums">
+                        {formatNumber(grp.subtotal.total)}
+                      </td>
+                    </tr>
+                  </div>
+                ))}
+
+                {/* Grand Total Row */}
+                <tr className="bg-[#0f172a] text-white font-extrabold border-t-2 border-slate-950">
+                  <td className="py-2.5 px-3 uppercase tracking-wider font-black text-white bg-[#0f172a] border-r border-slate-800 whitespace-nowrap">
+                    TOTAL
+                  </td>
+                  {etaTableData.dates.map((d) => {
+                    const val = etaTableData.grandTotal.byDate[d] || 0;
+                    return (
+                      <td
+                        key={d}
+                        className="py-2.5 px-2 text-center font-black text-white bg-[#0f172a] border-r border-slate-800 tabular-nums"
+                      >
+                        {val > 0 ? formatNumber(val) : ""}
+                      </td>
+                    );
+                  })}
+                  <td className="py-2.5 px-3 text-right font-black text-yellow-300 bg-[#0f172a] tabular-nums text-xs">
+                    {formatNumber(etaTableData.grandTotal.total)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
 
       {/* Operational Watchlist: Detail LOPs with NY Ready */}
       <Card className="glass-card overflow-hidden">

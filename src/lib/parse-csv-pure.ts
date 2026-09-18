@@ -133,6 +133,55 @@ export function parsePlanGLxl(val: string | undefined): string | null {
   return parseDateToIso(trimmed);
 }
 
+export function parseEtaDate(val: string | undefined): string | null {
+  if (!val) return null;
+  const trimmed = val.trim();
+  if (
+    !trimmed ||
+    trimmed === "#N/A" ||
+    trimmed === "-" ||
+    trimmed.toLowerCase().includes("ready")
+  )
+    return null;
+
+  const monthMap: Record<string, string> = {
+    jan: "01",
+    feb: "02",
+    mar: "03",
+    apr: "04",
+    mei: "05",
+    may: "05",
+    jun: "06",
+    jul: "07",
+    agu: "08",
+    aug: "08",
+    sep: "09",
+    okt: "10",
+    oct: "10",
+    nop: "11",
+    nov: "11",
+    des: "12",
+    dec: "12",
+  };
+
+  const dashParts = trimmed.split("-");
+  if (dashParts.length === 3) {
+    const day = dashParts[0].padStart(2, "0");
+    const monthKey = dashParts[1].slice(0, 3).toLowerCase();
+    const month = monthMap[monthKey] || "09";
+    return `${day}/${month}`;
+  }
+
+  const slashParts = trimmed.split("/");
+  if (slashParts.length >= 2) {
+    const day = slashParts[0].padStart(2, "0");
+    const month = slashParts[1].padStart(2, "0");
+    return `${day}/${month}`;
+  }
+
+  return null;
+}
+
 function cleanString(val: string | undefined): string {
   if (!val) return "";
   const trimmed = val.trim();
@@ -244,6 +293,7 @@ export function parseCsvString(csvContent: string): {
       statusGdTa: cleanString(row[29]),
       statusGL: cleanString(row[30]),
       planGLxl: parsePlanGLxl(row[31]),
+      planEta: parseEtaDate(row[24]),
     });
   }
 
