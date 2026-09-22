@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
   Menu,
   Search,
@@ -407,15 +408,20 @@ export function Dashboard({
               </Sheet>
             </div>
 
-            <div>
-              <div className="flex items-center gap-2 min-w-0">
-                <h1 className="text-sm sm:text-base lg:text-lg font-bold tracking-tight text-slate-800 whitespace-nowrap">
-                  Fokus Prioritas 20 Branch
-                </h1>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-slate-900 border border-slate-700/40 shadow-2xs flex items-center justify-center p-0.5">
+                <Image src="/logo.png" alt="TDSC Logo" width={32} height={32} className="w-full h-full object-contain" />
               </div>
-              <p className="text-xs text-slate-500 hidden sm:block">
-                Monitoring Status Konstruksi, Status Go-Live, & Port Plan vs Realisasi
-              </p>
+              <div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <h1 className="text-sm sm:text-base lg:text-lg font-bold tracking-tight text-slate-800 whitespace-nowrap">
+                    TDSC Dashboard
+                  </h1>
+                </div>
+                <p className="text-xs text-slate-500 hidden sm:block">
+                  Monitoring Status Konstruksi, Status Go-Live, & Port Plan vs Realisasi
+                </p>
+              </div>
             </div>
           </div>
 

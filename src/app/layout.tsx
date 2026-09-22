@@ -6,8 +6,12 @@ import { AuthProvider } from "@/components/auth-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Fokus Prioritas 20 Branch",
+  title: "TDSC Dashboard",
   description: "Executive Dashboard Status Konstruksi, Status Go-Live, dan Port Plan vs Realisasi",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
