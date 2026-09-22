@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildConstructionPipeline } from "../src/lib/dashboard-metrics";
+import {
+  buildConstructionPipeline,
+  createDefaultFilterState,
+  createEmptyFilterState,
+  getDefaultPrioFlags,
+  isDefaultFilterState,
+} from "../src/lib/dashboard-metrics";
 
 const records = [
   {
@@ -53,4 +59,51 @@ test("LOP pipeline counts every staged record regardless of PT", () => {
   assert.equal(preparation?.total, 2);
   assert.equal(preparation?.unassigned, 1);
   assert.equal(pipeline.grandSum, 3);
+});
+
+test("getDefaultPrioFlags selects Agustus and September from available filter options", () => {
+  const flags = ["Prio Agustus", "Prio September", "Prio Oktober"];
+  assert.deepEqual(getDefaultPrioFlags(flags), [
+    "Prio Agustus",
+    "Prio September",
+  ]);
+});
+
+test("getDefaultPrioFlags falls back to Agustus and September when options are empty or omitted", () => {
+  assert.deepEqual(getDefaultPrioFlags(), [
+    "Prio Agustus",
+    "Prio September",
+  ]);
+  assert.deepEqual(getDefaultPrioFlags([]), [
+    "Prio Agustus",
+    "Prio September",
+  ]);
+});
+
+test("createDefaultFilterState initializes with default priority months and branchFokus true", () => {
+  const defaultState = createDefaultFilterState({
+    prioFlag: ["Prio Agustus", "Prio September", "Prio Oktober"],
+  });
+
+  assert.deepEqual(defaultState.prioFlag, ["Prio Agustus", "Prio September"]);
+  assert.equal(defaultState.branchFokus, true);
+  assert.equal(defaultState.pt.length, 0);
+  assert.equal(defaultState.search, "");
+});
+
+test("isDefaultFilterState detects when filters match default vs modified", () => {
+  const options = {
+    prioFlag: ["Prio Agustus", "Prio September", "Prio Oktober"],
+  };
+  const defaultState = createDefaultFilterState(options);
+  assert.equal(isDefaultFilterState(defaultState, options), true);
+
+  const clearedState = createEmptyFilterState();
+  assert.equal(isDefaultFilterState(clearedState, options), false);
+
+  const modifiedState = {
+    ...defaultState,
+    area: ["AREA 1"],
+  };
+  assert.equal(isDefaultFilterState(modifiedState, options), false);
 });

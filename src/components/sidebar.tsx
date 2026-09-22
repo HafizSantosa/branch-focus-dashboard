@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FilterState, FilterOptions } from "@/types/lop";
 import { formatNumber } from "@/lib/utils";
+import { isDefaultFilterState } from "@/lib/dashboard-metrics";
 
 interface SidebarProps {
   filterOptions: FilterOptions;
@@ -54,18 +55,8 @@ export function Sidebar({
   }, [availableBranches, branchSearch]);
 
   const hasActiveFilters = useMemo(() => {
-    return (
-      (filterState?.prioFlag?.length || 0) > 0 ||
-      (filterState?.pt?.length || 0) > 0 ||
-      (filterState?.mitra?.length || 0) > 0 ||
-      (filterState?.area?.length || 0) > 0 ||
-      (filterState?.regional?.length || 0) > 0 ||
-      (filterState?.branch?.length || 0) > 0 ||
-      (filterState?.statusKonstruksi?.length || 0) > 0 ||
-      !filterState?.branchFokus ||
-      Boolean(filterState?.search)
-    );
-  }, [filterState]);
+    return !isDefaultFilterState(filterState, filterOptions);
+  }, [filterState, filterOptions]);
 
   return (
     <aside className="w-72 bg-slate-900 text-slate-100 flex flex-col h-full border-r border-slate-800 select-none">

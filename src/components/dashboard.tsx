@@ -28,6 +28,10 @@ import {
   KeyRound,
 } from "lucide-react";
 import { LopRecord, FilterState, FilterOptions } from "@/types/lop";
+import {
+  createDefaultFilterState,
+  createEmptyFilterState,
+} from "@/lib/dashboard-metrics";
 import { Sidebar } from "@/components/sidebar";
 import { KpiCards } from "@/components/kpi-cards";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -122,17 +126,9 @@ export function Dashboard({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Filter State
-  const [filterState, setFilterState] = useState<FilterState>({
-    prioFlag: [],
-    pt: [],
-    area: [],
-    mitra: [],
-    regional: [],
-    branch: [],
-    statusKonstruksi: [],
-    branchFokus: true,
-    search: "",
-  });
+  const [filterState, setFilterState] = useState<FilterState>(() =>
+    createDefaultFilterState(initialFilterOptions)
+  );
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -304,17 +300,11 @@ export function Dashboard({
   }, [records, filterState]);
 
   const handleResetFilter = () => {
-    setFilterState({
-      prioFlag: [],
-      pt: [],
-      area: [],
-      mitra: [],
-      regional: [],
-      branch: [],
-      statusKonstruksi: [],
-      branchFokus: true,
-      search: "",
-    });
+    setFilterState(createDefaultFilterState(activeFilterOptions));
+  };
+
+  const handleClearAllFilters = () => {
+    setFilterState(createEmptyFilterState());
   };
 
   const removeFilterItem = (key: keyof Omit<FilterState, "branchFokus" | "search">, val: string) => {
@@ -565,7 +555,7 @@ export function Dashboard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleResetFilter}
+                onClick={handleClearAllFilters}
                 className="h-6 px-2 text-[11px] text-blue-600 hover:text-blue-800"
               >
                 Hapus Semua
