@@ -415,7 +415,7 @@ export function Dashboard({
               <div>
                 <div className="flex items-center gap-2 min-w-0">
                   <h1 className="text-sm sm:text-base lg:text-lg font-bold tracking-tight text-slate-800 whitespace-nowrap">
-                    TDSC Dashboard
+                    Dashboard LOP Priority 20 Branch
                   </h1>
                 </div>
                 <p className="text-xs text-slate-500 hidden sm:block">

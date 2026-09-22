@@ -53,7 +53,7 @@ export default function LoginPage() {
             <Image src="/logo.png" alt="TDSC Logo" width={56} height={56} className="w-full h-full object-contain" />
           </div>
           <h1 className="text-xl font-bold text-slate-800 tracking-tight">
-            TDSC Dashboard
+            Dashboard LOP Priority 20 Branch
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Masuk untuk mengakses dashboard

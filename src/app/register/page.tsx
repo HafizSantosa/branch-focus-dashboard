@@ -129,7 +129,7 @@ export default function RegisterPage() {
             <Image src="/logo.png" alt="TDSC Logo" width={48} height={48} className="w-full h-full object-contain" />
           </div>
           <h1 className="text-xl font-bold text-slate-800 tracking-tight">Buat Akun</h1>
-          <p className="text-sm text-slate-500 mt-1">TDSC Dashboard</p>
+          <p className="text-sm text-slate-500 mt-1">Dashboard LOP Priority 20 Branch</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 shadow-sm">

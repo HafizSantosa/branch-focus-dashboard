@@ -66,7 +66,7 @@ export async function sendVerificationEmail(
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
         <h2 style="color:#1e40af">Verifikasi Email Anda</h2>
         <p>Halo <strong>${safeUsername}</strong>,</p>
-        <p>Terima kasih telah mendaftar di Dashboard LOP Prioritas 20 Branch.</p>
+        <p>Terima kasih telah mendaftar di Dashboard LOP Priority 20 Branch.</p>
         <p>Klik tombol di bawah untuk mengaktifkan akun Anda:</p>
         <a href="${safeLink}"
            style="display:inline-block;margin:16px 0;padding:12px 24px;

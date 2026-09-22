@@ -1,4 +1,4 @@
-# Dashboard LOP Prioritas 20 Branch
+# Dashboard LOP Priority 20 Branch
 
 Executive dashboard for monitoring infrastructure rollout, construction stages, go-live tracking, material readiness, and port capacity across Telkom Indonesia priority branches.
 

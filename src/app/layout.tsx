@@ -6,7 +6,7 @@ import { AuthProvider } from "@/components/auth-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "TDSC Dashboard",
+  title: "Dashboard LOP Priority 20 Branch",
   description: "Executive Dashboard Status Konstruksi, Status Go-Live, dan Port Plan vs Realisasi",
   icons: {
     icon: "/logo.png",
