@@ -17,6 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LopRecord } from "@/types/lop";
 import { formatNumber, formatPercent } from "@/lib/utils";
+import { buildConstructionPipeline } from "@/lib/dashboard-metrics";
 
 interface KonstruksiTabProps {
   data: LopRecord[];
@@ -49,52 +50,11 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
   const isPort = unit === "port";
   const unitLabel = isPort ? "Port" : "LOP";
 
-  // 1. Pipeline Stages Data with PT2 vs PT3 breakdown (excluding drops)
-  const pipelineData = useMemo(() => {
-    const stages = [
-      "01. Persiapan",
-      "02. Material Delivery",
-      "03. OGP Instalasi",
-      "04. Finish Instalasi",
-      "05. Go Live",
-    ];
-
-    let grandSum = 0;
-
-    const items = stages.map((stageName) => {
-      let pt2 = 0;
-      let pt3 = 0;
-      for (const d of data) {
-        if (d.statusKonstruksi === stageName) {
-          if (isPort) {
-            const val = stageName === "05. Go Live" ? d.portReal : d.portPlan;
-            if (d.pt === "PT2") pt2 += val;
-            else if (d.pt === "PT3") pt3 += val;
-          } else {
-            if (d.pt === "PT2") pt2 += 1;
-            else if (d.pt === "PT3") pt3 += 1;
-          }
-        }
-      }
-      const total = pt2 + pt3;
-      grandSum += total;
-
-      return {
-        stage: stageName,
-        pt2,
-        pt3,
-        total,
-      };
-    });
-
-    return {
-      items: items.map((item) => ({
-        ...item,
-        pct: grandSum > 0 ? (item.total / grandSum) * 100 : 0,
-      })),
-      grandSum,
-    };
-  }, [data, isPort]);
+  // Keep stage totals visible even when the source omits PT classification.
+  const pipelineData = useMemo(
+    () => buildConstructionPipeline(data, unit),
+    [data, unit]
+  );
 
   // 2. Status by Area Data
   const areaData = useMemo(() => {
@@ -278,7 +238,8 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
               </span>
             </CardTitle>
             <CardDescription className="text-xs text-slate-500">
-              Distribusi volume {isPort ? "kapasitas port" : "LOP"} pada tiap tahapan pengerjaan (Split PT2 vs PT3)
+              Distribusi volume {isPort ? "kapasitas port" : "LOP"} per tahap,
+              termasuk data yang belum memiliki klasifikasi PT
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-2">
@@ -322,6 +283,14 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
                                   {formatNumber(item?.pt3 || 0)} {unitLabel}
                                 </span>
                               </div>
+                              {pipelineData.unassignedTotal > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-amber-400">PT belum diisi:</span>
+                                  <span className="font-semibold text-white">
+                                    {formatNumber(item?.unassigned || 0)} {unitLabel}
+                                  </span>
+                                </div>
+                              )}
                               <div className="flex justify-between pt-1 border-t border-slate-700 font-bold">
                                 <span>Total:</span>
                                 <span className="text-yellow-400">
@@ -349,12 +318,29 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
                     name="PT3"
                     stackId="pipe"
                     fill="#8b5cf6"
+                    radius={[0, 0, 0, 0]}
+                    isAnimationActive={false}
+                  />
+                  <Bar
+                    dataKey="unassigned"
+                    name="PT Belum Diisi"
+                    stackId="pipe"
+                    fill="#f59e0b"
                     radius={[0, 4, 4, 0]}
                     isAnimationActive={false}
                   />
                 </BarChart>
               </ResponsiveContainer>
             </div>
+
+            {pipelineData.unassignedTotal > 0 && (
+              <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+                <span className="font-semibold">Kualitas data:</span>{" "}
+                {formatNumber(pipelineData.unassignedTotal)} {unitLabel} memiliki
+                status konstruksi tetapi kolom PT belum diisi. Nilai tetap
+                ditampilkan sebagai &quot;PT Belum Diisi&quot;.
+              </div>
+            )}
 
             {/* Pipeline Stage Flow Step Cards */}
             <div className="grid grid-cols-5 gap-1.5 pt-3 border-t border-slate-100 text-center">
@@ -375,8 +361,8 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
                     </div>
                   </div>
 
-                  {/* Clean 2-column PT breakdown without any overflow */}
-                  <div className="grid grid-cols-2 gap-1 pt-1.5 mt-2 border-t border-slate-200/70 text-center">
+                  {/* PT breakdown, including incomplete source classification */}
+                  <div className={`grid ${pipelineData.unassignedTotal > 0 ? "grid-cols-3" : "grid-cols-2"} gap-1 pt-1.5 mt-2 border-t border-slate-200/70 text-center`}>
                     <div className="bg-blue-50/60 rounded py-0.5 px-0.5 border border-blue-100">
                       <span className="text-[8.5px] font-semibold text-blue-700 block uppercase">PT2</span>
                       <span className="text-[10px] font-bold text-slate-800 tabular-nums block truncate">
@@ -389,6 +375,14 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
                         {formatNumber(s.pt3)}
                       </span>
                     </div>
+                    {pipelineData.unassignedTotal > 0 && (
+                      <div className="bg-amber-50/70 rounded py-0.5 px-0.5 border border-amber-100">
+                        <span className="text-[8.5px] font-semibold text-amber-700 block uppercase">Belum PT</span>
+                        <span className="text-[10px] font-bold text-slate-800 tabular-nums block truncate">
+                          {formatNumber(s.unassigned)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
