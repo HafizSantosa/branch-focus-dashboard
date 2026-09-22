@@ -2,18 +2,21 @@
 # Usage: docker compose -f docker-compose.dev.yml up
 services:
   app:
+    container_name: lop-priority-dev
     build:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+      - "${PORT:-3001}:3000"
     volumes:
       - .:/app
       - /app/node_modules
       - /app/.next
     env_file:
-      - .env.local
+      - path: .env.local
+        required: false
+      - path: .env
+        required: false
     environment:
       - WATCHPACK_POLLING=true
-      - AUTH_USERS_FILE=/app/users.json
       - DB_PATH=/app/data/users.db

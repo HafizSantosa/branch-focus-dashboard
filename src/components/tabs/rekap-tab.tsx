@@ -81,13 +81,19 @@ export function RekapTab({ data }: RekapTabProps) {
   const { areaGroups, grandTotal, kpis } = useMemo(() => {
     // Collect all branches present in data + defaults
     const branchRowsMap = new Map<string, LopRecord[]>();
-    for (const r of data) {
-      if (!r.branch) continue;
-      const bUpper = r.branch.toUpperCase().trim();
-      if (!branchRowsMap.has(bUpper)) {
-        branchRowsMap.set(bUpper, []);
+    const observedBranchesByArea = new Map<string, Set<string>>();
+    for (const record of data) {
+      if (!record.branch) continue;
+      const branch = record.branch.toUpperCase().trim();
+      if (!branchRowsMap.has(branch)) {
+        branchRowsMap.set(branch, []);
       }
-      branchRowsMap.get(bUpper)!.push(r);
+      branchRowsMap.get(branch)!.push(record);
+
+      if (!observedBranchesByArea.has(record.area)) {
+        observedBranchesByArea.set(record.area, new Set());
+      }
+      observedBranchesByArea.get(record.area)!.add(branch);
     }
 
     const calculateBranchRekap = (areaName: string, branchName: string): BranchRekap => {
@@ -170,7 +176,13 @@ export function RekapTab({ data }: RekapTabProps) {
     let gtTotal = emptySplit();
 
     for (const area of areaNames) {
-      const definedBranches = DEFAULT_BRANCH_BY_AREA[area] || [];
+      const defaultBranches = DEFAULT_BRANCH_BY_AREA[area] || [];
+      const additionalBranches = Array.from(
+        observedBranchesByArea.get(area) ?? []
+      )
+        .filter((branch) => !defaultBranches.includes(branch))
+        .sort();
+      const definedBranches = [...defaultBranches, ...additionalBranches];
       const branchRekaps: BranchRekap[] = [];
 
       let stDropDbp = emptySplit();

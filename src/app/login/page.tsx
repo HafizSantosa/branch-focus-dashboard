@@ -31,6 +31,8 @@ export default function LoginPage() {
         setError("Email belum diverifikasi. Cek inbox Anda.");
       } else if (result.error === "ACCOUNT_DISABLED") {
         setError("Akun Anda dinonaktifkan. Hubungi administrator.");
+      } else if (result.error === "RATE_LIMITED") {
+        setError("Terlalu banyak percobaan login. Coba lagi dalam 15 menit.");
       } else {
         setError("Username atau password salah.");
       }
@@ -42,26 +44,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         {/* Logo / Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 shadow-lg shadow-blue-600/30 mb-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 shadow-lg shadow-blue-600/20 mb-4">
             <ShieldCheck className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-white tracking-tight">
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">
             Fokus Prioritas 20 Branch
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Masuk untuk mengakses dashboard
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300 block">
+              <label className="text-xs font-medium text-slate-700 block">
                 Username
               </label>
               <input
@@ -71,12 +73,12 @@ export default function LoginPage() {
                 autoComplete="username"
                 required
                 placeholder="Masukkan username"
-                className="w-full px-3 py-2.5 text-sm rounded-lg bg-white/10 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300 block">
+              <label className="text-xs font-medium text-slate-700 block">
                 Password
               </label>
               <input
@@ -86,12 +88,12 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 required
                 placeholder="Masukkan password"
-                className="w-full px-3 py-2.5 text-sm rounded-lg bg-white/10 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
 
             {error && (
-              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
                 {error}
               </div>
             )}
@@ -99,7 +101,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors shadow-lg shadow-blue-600/20"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors shadow-sm shadow-blue-600/20"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -111,14 +113,11 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-xs text-slate-500 mt-4">
+        <p className="text-center text-xs text-slate-500 mt-5">
           Belum punya akun?{" "}
-          <Link href="/register" className="text-blue-400 hover:text-blue-300">
+          <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
             Daftar
           </Link>
-        </p>
-        <p className="text-center text-[11px] text-slate-600 mt-2">
-          Telkom Indonesia · TREG 3
         </p>
       </div>
     </div>

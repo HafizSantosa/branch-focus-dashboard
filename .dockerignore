@@ -1,3 +1,10 @@
 node_modules
 .next
 out
+.git
+.env
+.env.*
+data
+users.json
+*.csv
+npm-debug.log*

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, KeyRound, CheckCircle2 } from "lucide-react";
@@ -27,7 +27,7 @@ export default function ChangePasswordPage() {
     e.preventDefault();
     setError(null);
     if (form.next !== form.confirm) { setError("Password baru tidak cocok."); return; }
-    if (form.next.length < 8) { setError("Password minimal 8 karakter."); return; }
+    if (form.next.length < 12) { setError("Password minimal 12 karakter."); return; }
 
     setLoading(true);
     const res = await fetch("/api/user/change-password", {
@@ -40,6 +40,7 @@ export default function ChangePasswordPage() {
 
     if (!res.ok) { setError(data.error ?? "Terjadi kesalahan."); return; }
     setSuccess(true);
+    await signOut({ callbackUrl: "/login" });
   };
 
   return (
@@ -76,6 +77,8 @@ export default function ChangePasswordPage() {
                     value={form[key]}
                     onChange={set(key)}
                     required
+                    minLength={key === "current" ? undefined : 12}
+                    maxLength={72}
                     className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   />
                 </div>

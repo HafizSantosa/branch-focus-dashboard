@@ -1,12 +1,10 @@
-import nodemailer from "nodemailer";
+import nodemailer from "nodemailer10";
 
-/**
- * Create the SMTP transporter from environment variables.
- * If SMTP_HOST is not set, falls back to Ethereal (auto-created test account)
- * and logs the preview URL to the console — useful for local dev without SMTP.
- */
 async function createTransporter() {
   if (process.env.SMTP_HOST) {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      throw new Error("SMTP_USER and SMTP_PASS are required when SMTP_HOST is set");
+    }
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT ?? 587),
@@ -18,9 +16,12 @@ async function createTransporter() {
     });
   }
 
-  // Dev fallback: Ethereal test account (emails visible at ethereal.email)
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SMTP_HOST is required in production");
+  }
+
   const testAccount = await nodemailer.createTestAccount();
-  console.log("[email] No SMTP_HOST set — using Ethereal test account");
+  console.info("[email] No SMTP_HOST set; using an Ethereal test account");
   return nodemailer.createTransport({
     host: "smtp.ethereal.email",
     port: 587,
@@ -31,28 +32,43 @@ async function createTransporter() {
   });
 }
 
-const FROM = process.env.SMTP_FROM ?? "noreply@lop-dashboard.local";
-const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[character] ?? character
+  );
+}
 
 export async function sendVerificationEmail(
   to: string,
   username: string,
   token: string
 ): Promise<void> {
-  const link = `${BASE_URL}/verify-email?token=${token}`;
+  const from = process.env.SMTP_FROM ?? "noreply@lop-dashboard.local";
+  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const link = `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
   const transporter = await createTransporter();
+  const safeUsername = escapeHtml(username);
+  const safeLink = escapeHtml(link);
 
   const info = await transporter.sendMail({
-    from: FROM,
+    from,
     to,
     subject: "Verifikasi Akun Dashboard LOP Prioritas",
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
         <h2 style="color:#1e40af">Verifikasi Email Anda</h2>
-        <p>Halo <strong>${username}</strong>,</p>
+        <p>Halo <strong>${safeUsername}</strong>,</p>
         <p>Terima kasih telah mendaftar di Dashboard LOP Prioritas 20 Branch.</p>
         <p>Klik tombol di bawah untuk mengaktifkan akun Anda:</p>
-        <a href="${link}"
+        <a href="${safeLink}"
            style="display:inline-block;margin:16px 0;padding:12px 24px;
                   background:#2563eb;color:#fff;text-decoration:none;
                   border-radius:8px;font-weight:600">
@@ -67,9 +83,8 @@ export async function sendVerificationEmail(
     `,
   });
 
-  // In dev (Ethereal), log the preview URL so the email can be inspected
   const previewUrl = nodemailer.getTestMessageUrl(info);
   if (previewUrl) {
-    console.log(`[email] Verification email preview: ${previewUrl}`);
+    console.info(`[email] Verification email preview: ${previewUrl}`);
   }
 }

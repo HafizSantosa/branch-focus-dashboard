@@ -9,16 +9,19 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Token tidak ditemukan." }, { status: 400 });
   }
 
-  const user = userDb.findByVerificationToken(token);
-  if (!user) {
-    return NextResponse.json({ error: "Token tidak valid atau sudah digunakan." }, { status: 400 });
+  const result = userDb.consumeVerificationToken(token);
+  if (result === "expired") {
+    return NextResponse.json(
+      { error: "Token sudah kadaluarsa. Silakan daftar ulang." },
+      { status: 400 }
+    );
+  }
+  if (result === "invalid") {
+    return NextResponse.json(
+      { error: "Token tidak valid atau sudah digunakan." },
+      { status: 400 }
+    );
   }
 
-  const now = Math.floor(Date.now() / 1000);
-  if (user.verification_expires && user.verification_expires < now) {
-    return NextResponse.json({ error: "Token sudah kadaluarsa. Silakan daftar ulang." }, { status: 400 });
-  }
-
-  userDb.verifyEmail(user.id);
   return NextResponse.json({ ok: true });
 }

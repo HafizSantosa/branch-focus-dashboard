@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   Menu,
   Search,
@@ -47,22 +47,9 @@ import { PortTab } from "@/components/tabs/port-tab";
 import { DetailTab } from "@/components/tabs/detail-tab";
 import { RekapTab } from "@/components/tabs/rekap-tab";
 import { MaterialTab } from "@/components/tabs/material-tab";
-import { parseCsvString, normalizeGoogleSheetUrl } from "@/lib/parse-csv-pure";
 import { formatNumber } from "@/lib/utils";
 import { useAuth, logout } from "@/components/auth-provider";
 
-export const DEFAULT_GOOGLE_SHEET_URL =
-  "https://docs.google.com/spreadsheets/d/1-gPTbg9lJpow7Ir5iU7OGNFQIHoZ0Mja5IuLpGpIW0g/edit?usp=sharing";
-
-export const DEFAULT_FILTER_OPTIONS: FilterOptions = {
-  prioFlag: [],
-  pt: [],
-  mitra: [],
-  area: [],
-  regional: [],
-  branch: [],
-  statusKonstruksi: [],
-};
 
 function getSheetMetadata(url: string) {
   if (!url) return null;
@@ -73,12 +60,38 @@ function getSheetMetadata(url: string) {
   return { sheetId, gid };
 }
 
+const CLIENT_SNAPSHOT_REFRESH_MS = 30_000;
+
+function formatSyncTime(syncedAt: number): string | null {
+  if (!syncedAt) return null;
+  return new Date(syncedAt * 1_000).toLocaleTimeString("en-GB", {
+    hour12: false,
+  });
+}
+
 interface DashboardProps {
   initialData?: LopRecord[];
   initialFilterOptions?: FilterOptions;
+  initialSheetUrl: string;
+  initialSyncedAt: number;
+  initialError?: string | null;
 }
 
-export function Dashboard({ initialData, initialFilterOptions }: DashboardProps) {
+interface DataResponse {
+  records?: LopRecord[];
+  filterOptions?: FilterOptions;
+  sheetUrl?: string;
+  syncedAt?: number;
+  error?: string;
+}
+
+export function Dashboard({
+  initialData,
+  initialFilterOptions,
+  initialSheetUrl,
+  initialSyncedAt,
+  initialError = null,
+}: DashboardProps) {
   const { name: userName, isAdmin } = useAuth();
   // Live Google Sheet Data State
   const [records, setRecords] = useState<LopRecord[]>(() =>
@@ -94,12 +107,15 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
     statusKonstruksi: initialFilterOptions?.statusKonstruksi || [],
   }));
 
-  const [sheetUrl, setSheetUrl] = useState<string>(DEFAULT_GOOGLE_SHEET_URL);
-  const [inputUrl, setInputUrl] = useState<string>(DEFAULT_GOOGLE_SHEET_URL);
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [sheetUrl, setSheetUrl] = useState(initialSheetUrl);
+  const [inputUrl, setInputUrl] = useState(initialSheetUrl);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() =>
+    formatSyncTime(initialSyncedAt)
+  );
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(initialError);
   const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
+  const latestSnapshotAt = useRef(initialSyncedAt);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -119,126 +135,106 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Restore saved URL & cached data on client mount
-  useEffect(() => {
-    try {
-      const savedUrl = localStorage.getItem("lop_sheet_csv_url");
-      if (savedUrl) {
-        setSheetUrl(savedUrl);
-        setInputUrl(savedUrl);
-      }
-
-      const savedTime = localStorage.getItem("lop_sheet_last_sync");
-      if (savedTime) {
-        setLastSyncTime(savedTime);
-      }
-
-      const cachedCsv = localStorage.getItem("lop_sheet_cached_csv");
-      if (cachedCsv) {
-        try {
-          const parsed = parseCsvString(cachedCsv);
-          if (parsed && Array.isArray(parsed.records) && parsed.records.length > 0) {
-            setRecords(parsed.records);
-            if (parsed.filterOptions) {
-              setActiveFilterOptions({
-                prioFlag: parsed.filterOptions.prioFlag || [],
-                pt: parsed.filterOptions.pt || [],
-                mitra: parsed.filterOptions.mitra || [],
-                area: parsed.filterOptions.area || [],
-                regional: parsed.filterOptions.regional || [],
-                branch: parsed.filterOptions.branch || [],
-                statusKonstruksi: parsed.filterOptions.statusKonstruksi || [],
-              });
-            }
-          }
-        } catch (e) {
-          console.warn("Could not parse cached CSV, clearing cache", e);
-          localStorage.removeItem("lop_sheet_cached_csv");
-        }
-      }
-    } catch (e) {
-      console.warn("Could not read from localStorage", e);
+  const applySnapshot = useCallback((payload: DataResponse) => {
+    if (
+      !payload.records?.length ||
+      !payload.filterOptions ||
+      !payload.sheetUrl ||
+      !payload.syncedAt
+    ) {
+      throw new Error("Server mengembalikan snapshot data yang tidak lengkap.");
     }
+
+    setRecords(payload.records);
+    setActiveFilterOptions(payload.filterOptions);
+    setSheetUrl(payload.sheetUrl);
+    setInputUrl(payload.sheetUrl);
+    setLastSyncTime(formatSyncTime(payload.syncedAt));
+    latestSnapshotAt.current = payload.syncedAt;
   }, []);
 
-  // Sync with Google Sheet
+  // Open dashboards converge on the same server snapshot without fetching
+  // Google Sheets independently.
+  useEffect(() => {
+    let cancelled = false;
+    const refreshSnapshot = async () => {
+      try {
+        const response = await fetch("/api/data", { cache: "no-store" });
+        const payload = (await response.json()) as DataResponse;
+        if (!response.ok) {
+          throw new Error(payload.error ?? `Pembaruan gagal (HTTP ${response.status}).`);
+        }
+        if (
+          !cancelled &&
+          payload.syncedAt &&
+          payload.syncedAt > latestSnapshotAt.current
+        ) {
+          applySnapshot(payload);
+        }
+      } catch (error) {
+        console.error("[dashboard] Snapshot refresh failed:", error);
+      }
+    };
+
+    const interval = window.setInterval(
+      refreshSnapshot,
+      CLIENT_SNAPSHOT_REFRESH_MS
+    );
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [applySnapshot]);
+
+  // A manual sync replaces the one shared server snapshot. Admin source
+  // changes are validated and committed with the resulting snapshot.
   const handleSync = useCallback(async (targetUrl?: string) => {
-    const rawUrl = (targetUrl ?? sheetUrl).trim();
-    if (!rawUrl) {
+    const saveSettings = targetUrl !== undefined;
+    const requestedUrl = targetUrl?.trim();
+    if (saveSettings && !requestedUrl) {
       setSyncError("Masukkan URL Google Sheets terlebih dahulu.");
-      setIsSettingsOpen(true);
       return;
     }
-
-    const urlToFetch = normalizeGoogleSheetUrl(rawUrl);
 
     setIsSyncing(true);
     setSyncError(null);
     setSyncSuccess(null);
 
     try {
-      if (!urlToFetch.startsWith("http://") && !urlToFetch.startsWith("https://")) {
-        throw new Error("URL harus diawali dengan https:// atau http://");
+      const response = await fetch(
+        saveSettings ? "/api/admin/settings/sheet" : "/api/data",
+        saveSettings
+          ? {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sheetUrl: requestedUrl }),
+            }
+          : { method: "POST" }
+      );
+      const payload = (await response.json()) as DataResponse;
+      if (!response.ok) {
+        throw new Error(payload.error ?? `Sinkronisasi gagal (HTTP ${response.status}).`);
       }
-
-      const res = await fetch(urlToFetch, { cache: "no-store" });
-      if (!res.ok) {
-        throw new Error(`Gagal mengambil data: HTTP ${res.status} (${res.statusText || "Error koneksi"})`);
-      }
-
-      const csvText = await res.text();
-      if (!csvText || csvText.trim().length === 0) {
-        throw new Error("Konten spreadsheet yang diunduh kosong.");
-      }
-
-      const parsed = parseCsvString(csvText);
-      if (!parsed || !Array.isArray(parsed.records) || parsed.records.length === 0) {
-        throw new Error("Tidak ada data LOP yang berhasil diproses. Pastikan format kolom sesuai.");
-      }
-
-      // Update active state
-      setRecords(parsed.records);
-      setActiveFilterOptions({
-        prioFlag: parsed.filterOptions?.prioFlag || [],
-        pt: parsed.filterOptions?.pt || [],
-        mitra: parsed.filterOptions?.mitra || [],
-        area: parsed.filterOptions?.area || [],
-        regional: parsed.filterOptions?.regional || [],
-        branch: parsed.filterOptions?.branch || [],
-        statusKonstruksi: parsed.filterOptions?.statusKonstruksi || [],
-      });
-      setSheetUrl(rawUrl);
-
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const nowStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-      setLastSyncTime(nowStr);
-
-      // Save to localStorage
-      try {
-        localStorage.setItem("lop_sheet_csv_url", rawUrl);
-        localStorage.setItem("lop_sheet_last_sync", nowStr);
-        localStorage.setItem("lop_sheet_cached_csv", csvText);
-      } catch (storageErr) {
-        console.warn("Storage quota exceeded, cache skipped", storageErr);
-      }
-
-      setSyncSuccess(`Berhasil sinkronisasi ${formatNumber(parsed.records.length)} data LOP dari Google Sheet!`);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Gagal menghubungkan ke Google Sheets. Pastikan Spreadsheet dapat diakses publik atau melalui tautan bagikan.";
-      setSyncError(message);
+      const recordCount = payload.records?.length ?? 0;
+      applySnapshot(payload);
+      setSyncSuccess(
+        `Snapshot bersama diperbarui: ${formatNumber(recordCount)} data LOP.`
+      );
+    } catch (error) {
+      setSyncError(
+        error instanceof Error
+          ? error.message
+          : "Gagal menyinkronkan snapshot data bersama."
+      );
     } finally {
       setIsSyncing(false);
     }
-  }, [sheetUrl]);
+  }, [applySnapshot]);
 
   // Cascaded Regionals
   const availableRegionals = useMemo(() => {
     const defaultList = activeFilterOptions?.regional || [];
-    if (!filterState?.area || filterState.area.length === 0) return defaultList;
+    if (filterState.area.length === 0) return defaultList;
     const set = new Set<string>();
     for (const r of records || []) {
       if (r && r.area && filterState.area.includes(r.area) && r.regional) {
@@ -246,12 +242,12 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
       }
     }
     return Array.from(set).sort();
-  }, [records, activeFilterOptions, filterState?.area]);
+  }, [records, activeFilterOptions, filterState.area]);
 
   // Cascaded Branches
   const availableBranches = useMemo(() => {
     const defaultList = activeFilterOptions?.branch || [];
-    if (filterState?.regional && filterState.regional.length > 0) {
+    if (filterState.regional.length > 0) {
       const set = new Set<string>();
       for (const r of records || []) {
         if (r && r.regional && filterState.regional.includes(r.regional) && r.branch) {
@@ -260,7 +256,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
       }
       return Array.from(set).sort();
     }
-    if (filterState?.area && filterState.area.length > 0) {
+    if (filterState.area.length > 0) {
       const set = new Set<string>();
       for (const r of records || []) {
         if (r && r.area && filterState.area.includes(r.area) && r.branch) {
@@ -270,7 +266,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
       return Array.from(set).sort();
     }
     return defaultList;
-  }, [records, activeFilterOptions, filterState?.area, filterState?.regional]);
+  }, [records, activeFilterOptions, filterState.area, filterState.regional]);
 
   // Filtered dataset
   const filteredData = useMemo(() => {
@@ -423,16 +419,16 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
             </div>
           </div>
 
-          {/* Right Action Bar: Live Sync & Search */}
+          {/* Right Action Bar: Shared Sync & Search */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Live Google Sheet Status Badge */}
+            {/* Shared Snapshot Status Badge */}
             <div className="hidden md:flex items-center">
               <Badge
                 variant="outline"
                 className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[11px] font-medium py-1 px-2.5 flex items-center gap-1.5 shadow-2xs"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Live Google Sheet {lastSyncTime && `(${lastSyncTime.replace(/\./g, ":")})`}</span>
+                <span>Snapshot Bersama {lastSyncTime && `(${lastSyncTime.replace(/\./g, ":")})`}</span>
               </Badge>
             </div>
 
@@ -443,7 +439,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
               onClick={() => handleSync()}
               disabled={isSyncing}
               className="h-8 text-xs font-medium bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-xs flex items-center gap-1.5"
-              title="Perbarui data langsung dari Google Sheet"
+              title="Perbarui snapshot bersama dari Google Sheet"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 text-blue-600 ${isSyncing ? "animate-spin" : ""}`}
@@ -753,7 +749,7 @@ export function Dashboard({ initialData, initialFilterOptions }: DashboardProps)
               <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600 leading-relaxed pl-1">
                 <li>Anda dapat menggunakan tautan berbagi biasa (misal: <em>.../edit?usp=sharing</em>) atau tautan publikasi CSV.</li>
                 <li>Pastikan akses spreadsheet minimal <strong>Siapa saja yang memiliki tautan (Anyone with the link)</strong> dapat melihat (Viewer).</li>
-                <li>Setiap kali data di Spreadsheet diubah, klik tombol <strong>Sync Sheet</strong> di pojok kanan atas untuk memperbarui dashboard secara langsung.</li>
+                <li>Server menyinkronkan Google Sheet secara rutin. Semua dashboard terbuka mengambil snapshot bersama terbaru paling lambat setiap 30 detik.</li>
               </ul>
             </div>
           </div>
