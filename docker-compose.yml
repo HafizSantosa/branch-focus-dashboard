@@ -15,6 +15,7 @@ services:
       - app-data:/app/data
     environment:
       NODE_ENV: production
+      PORT: 3000
       NEXTAUTH_URL: "${NEXTAUTH_URL:?NEXTAUTH_URL must be set in .env}"
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?NEXTAUTH_SECRET must be set in .env}"
       DB_PATH: /app/data/users.db
