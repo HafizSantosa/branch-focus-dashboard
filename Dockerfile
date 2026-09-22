@@ -11,6 +11,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN mkdir -p public
 RUN npm test
 RUN npm run build
 
@@ -25,8 +26,8 @@ ENV HOSTNAME=0.0.0.0
 # Create non-root system user and prepare data directory for SQLite
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
-    mkdir -p /app/data /app/scripts && \
-    chown -R nextjs:nodejs /app/data /app/scripts
+    mkdir -p /app/data /app/scripts /app/public && \
+    chown -R nextjs:nodejs /app/data /app/scripts /app/public
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static

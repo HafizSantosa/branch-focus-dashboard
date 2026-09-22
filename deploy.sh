@@ -26,8 +26,8 @@ if [ ! -f .env ]; then
   echo "[2/6] Creating .env..."
   SECRET=$(openssl rand -hex 32)
 
-  read -rp "Gmail address for SMTP (e.g. myhafizas@gmail.com): " SMTP_USER
-  read -rsp "Gmail App Password: " SMTP_PASS && echo
+  read -rp "Gmail address for SMTP (e.g. myhafizas@gmail.com): " SMTP_USER < /dev/tty
+  read -rsp "Gmail App Password: " SMTP_PASS < /dev/tty && echo
 
   cat > .env << ENVEOF
 NEXTAUTH_URL=https://tdsc.online
@@ -69,9 +69,9 @@ curl -sf http://127.0.0.1:3001/api/health && echo ""
 
 # ── 4. Create admin ────────────────────────────────────
 echo "[4/6] Creating admin user..."
-read -rp "Admin username: " ADMIN_USER
-read -rp "Admin email: " ADMIN_EMAIL
-read -rsp "Admin password (min 12 chars): " ADMIN_PASS && echo
+read -rp "Admin username: " ADMIN_USER < /dev/tty
+read -rp "Admin email: " ADMIN_EMAIL < /dev/tty
+read -rsp "Admin password (min 12 chars): " ADMIN_PASS < /dev/tty && echo
 
 docker compose exec \
   -e ADMIN_USERNAME="$ADMIN_USER" \
@@ -107,7 +107,7 @@ echo "  Nginx configured."
 
 # ── 6. HTTPS ──────────────────────────────────────────
 echo "[6/6] Setting up HTTPS..."
-sudo certbot --nginx -d tdsc.online -d www.tdsc.online
+sudo certbot --nginx -d tdsc.online -d www.tdsc.online < /dev/tty
 
 echo ""
 echo "=== Deployment complete ==="
