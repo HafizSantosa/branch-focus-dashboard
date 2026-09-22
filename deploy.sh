@@ -73,7 +73,7 @@ read -rp "Admin username: " ADMIN_USER < /dev/tty
 read -rp "Admin email: " ADMIN_EMAIL < /dev/tty
 read -rsp "Admin password (min 12 chars): " ADMIN_PASS < /dev/tty && echo
 
-docker compose exec \
+docker compose exec -T \
   -e ADMIN_USERNAME="$ADMIN_USER" \
   -e ADMIN_EMAIL="$ADMIN_EMAIL" \
   -e ADMIN_PASSWORD="$ADMIN_PASS" \
