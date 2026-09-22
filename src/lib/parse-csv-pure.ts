@@ -189,6 +189,39 @@ function cleanString(val: string | undefined): string {
   return trimmed;
 }
 
+const INDONESIAN_MONTH_ORDER = [
+  "januari",
+  "februari",
+  "maret",
+  "april",
+  "mei",
+  "juni",
+  "juli",
+  "agustus",
+  "september",
+  "oktober",
+  "november",
+  "desember",
+] as const;
+
+function comparePriorityFlags(a: string, b: string): number {
+  const normalizedA = a.toLocaleLowerCase("id");
+  const normalizedB = b.toLocaleLowerCase("id");
+  const monthA = INDONESIAN_MONTH_ORDER.findIndex((month) =>
+    normalizedA.includes(month)
+  );
+  const monthB = INDONESIAN_MONTH_ORDER.findIndex((month) =>
+    normalizedB.includes(month)
+  );
+
+  if (monthA !== -1 && monthB !== -1 && monthA !== monthB) {
+    return monthA - monthB;
+  }
+  if (monthA !== -1 && monthB === -1) return -1;
+  if (monthA === -1 && monthB !== -1) return 1;
+  return a.localeCompare(b, "id");
+}
+
 export function parseCsvString(csvContent: string): {
   records: LopRecord[];
   filterOptions: FilterOptions;
@@ -341,7 +374,7 @@ export function parseCsvString(csvContent: string): {
   });
 
   const filterOptions: FilterOptions = {
-    prioFlag: Array.from(prioFlags).sort(),
+    prioFlag: Array.from(prioFlags).sort(comparePriorityFlags),
     pt: Array.from(pts).sort(),
     mitra: Array.from(mitras).sort(),
     area: Array.from(areas).sort(),

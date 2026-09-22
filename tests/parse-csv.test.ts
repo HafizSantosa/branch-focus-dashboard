@@ -112,3 +112,26 @@ test("preserves a selected Google Sheet gid in its CSV export URL", () => {
     "https://docs.google.com/spreadsheets/d/sheet-id/export?format=csv&gid=123"
   );
 });
+
+test("orders priority programs chronologically by Indonesian month", () => {
+  const priorities = ["Prio Oktober", "Prio Agustus", "Prio September"];
+  const rows = priorities.map((priority, index) => {
+    const row = Array.from({ length: headers.length }, () => "");
+    row[0] = `LOP-${index + 1}`;
+    row[2] = "1";
+    row[3] = "0";
+    row[8] = "BEKASI";
+    row[9] = "PT3";
+    row[13] = priority;
+    row[20] = "01. Persiapan";
+    return row.join(",");
+  });
+
+  const result = parseCsvString([headers.join(","), ...rows].join("\n"));
+
+  assert.deepEqual(result.filterOptions.prioFlag, [
+    "Prio Agustus",
+    "Prio September",
+    "Prio Oktober",
+  ]);
+});
