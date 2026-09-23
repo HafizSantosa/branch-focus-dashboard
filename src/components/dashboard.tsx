@@ -90,6 +90,21 @@ interface DataResponse {
   error?: string;
 }
 
+interface BackupStatusResponse {
+  enabled: boolean;
+  configured: boolean;
+  outcome: "running" | "success" | "error";
+  dailyAt: string;
+  timeZone: string;
+  lastAttemptAt: number;
+  lastSuccessAt?: number;
+  fileName?: string;
+  webViewLink?: string;
+  rowCount?: number;
+  error?: string;
+  folderUrl?: string;
+}
+
 export function Dashboard({
   initialData,
   initialFilterOptions,
@@ -122,6 +137,11 @@ export function Dashboard({
   const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
   const latestSnapshotAt = useRef(initialSyncedAt);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [backupStatus, setBackupStatus] =
+    useState<BackupStatusResponse | null>(null);
+  const [backupStatusError, setBackupStatusError] = useState<string | null>(
+    null
+  );
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -153,6 +173,7 @@ export function Dashboard({
   // Open dashboards converge on the same server snapshot without fetching
   // Google Sheets independently.
   useEffect(() => {
+
     let cancelled = false;
     const refreshSnapshot = async () => {
       try {
@@ -182,6 +203,37 @@ export function Dashboard({
       window.clearInterval(interval);
     };
   }, [applySnapshot]);
+  useEffect(() => {
+    if (!isAdmin || !isSettingsOpen) return;
+    const controller = new AbortController();
+
+    fetch("/api/admin/backup", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as
+          | BackupStatusResponse
+          | { error?: string };
+        if (!response.ok) {
+          throw new Error(
+            "error" in payload && payload.error
+              ? payload.error
+              : "Gagal memuat status backup."
+          );
+        }
+        setBackupStatusError(null);
+        setBackupStatus(payload as BackupStatusResponse);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setBackupStatusError(
+          error instanceof Error ? error.message : "Gagal memuat status backup."
+        );
+      });
+
+    return () => controller.abort();
+  }, [isAdmin, isSettingsOpen]);
 
   // A manual sync replaces the one shared server snapshot. Admin source
   // changes are validated and committed with the resulting snapshot.
@@ -716,6 +768,87 @@ export function Dashboard({
                 </div>
               );
             })()}
+
+            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                  <Database className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Backup CSV Harian</span>
+                </div>
+                {backupStatus?.folderUrl && (
+                  <a
+                    href={backupStatus.folderUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-blue-600 hover:underline"
+                  >
+                    Buka Folder Drive
+                  </a>
+                )}
+              </div>
+              {backupStatusError ? (
+                <p className="text-[11px] text-rose-700">{backupStatusError}</p>
+              ) : !backupStatus ? (
+                <p className="text-[11px] text-slate-500">Memuat status backup...</p>
+              ) : !backupStatus.enabled ? (
+                <p className="text-[11px] text-slate-600">
+                  Backup Google Drive belum diaktifkan.
+                </p>
+              ) : !backupStatus.configured ? (
+                <p className="text-[11px] text-rose-700">
+                  Backup aktif, tetapi folder atau kredensial belum valid.
+                </p>
+              ) : (
+                <div className="space-y-1 text-[11px] text-slate-600">
+                  <p>
+                    Jadwal: <strong>{backupStatus.dailyAt}</strong>{" "}
+                    {backupStatus.timeZone}
+                  </p>
+                  {backupStatus.lastSuccessAt ? (
+                    <p>
+                      Terakhir berhasil:{" "}
+                      <strong>
+                        {new Date(
+                          backupStatus.lastSuccessAt * 1_000
+                        ).toLocaleString("id-ID", {
+                          timeZone: backupStatus.timeZone,
+                        })}
+                      </strong>
+                      {typeof backupStatus.rowCount === "number" &&
+                        ` · ${formatNumber(backupStatus.rowCount)} baris`}
+                    </p>
+                  ) : (
+                    <p>Menunggu jadwal backup pertama.</p>
+                  )}
+                  {backupStatus.fileName && (
+                    <p className="font-mono text-[10px]">
+                      {backupStatus.webViewLink ? (
+                        <a
+                          href={backupStatus.webViewLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          {backupStatus.fileName}
+                        </a>
+                      ) : (
+                        backupStatus.fileName
+                      )}
+                    </p>
+                  )}
+                  {backupStatus.outcome === "running" && (
+                    <p className="text-blue-700">Backup sedang berjalan...</p>
+                  )}
+                  {backupStatus.outcome === "error" &&
+                    backupStatus.lastAttemptAt > 0 &&
+                    backupStatus.error && (
+                      <p className="text-rose-700">
+                        Percobaan terakhir gagal: {backupStatus.error}
+                      </p>
+                    )}
+                </div>
+              )}
+            </div>
 
             {/* Error Banner */}
             {syncError && (
