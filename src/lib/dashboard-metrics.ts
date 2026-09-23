@@ -140,3 +140,88 @@ export function isDefaultFilterState(
     !state.search
   );
 }
+
+type KpiRecord = Pick<
+  LopRecord,
+  "statusKonstruksi" | "portPlan" | "portReal"
+>;
+
+export function buildKpiMetrics(data: readonly KpiRecord[]) {
+  let totalPortPlan = 0;
+  let totalPortReal = 0;
+  let dropPort = 0;
+  let dropLop = 0;
+  let persiapanPort = 0;
+  let persiapanLop = 0;
+  let matdelPort = 0;
+  let matdelLop = 0;
+  let ogpPort = 0;
+  let ogpLop = 0;
+  let finishPort = 0;
+  let finishLop = 0;
+  let goLiveLop = 0;
+
+  for (const record of data) {
+    const portPlan = Number.isFinite(record.portPlan) ? record.portPlan : 0;
+    const portReal = Number.isFinite(record.portReal) ? record.portReal : 0;
+    totalPortPlan += portPlan;
+    totalPortReal += portReal;
+    if (portReal > 0) goLiveLop += 1;
+
+    const status = record.statusKonstruksi || "";
+    if (
+      status.startsWith("00.") ||
+      status.startsWith("0.") ||
+      status.toLowerCase().includes("drop") ||
+      status.toLowerCase().includes("kendala")
+    ) {
+      dropPort += portPlan;
+      dropLop += 1;
+    } else if (status === "01. Persiapan") {
+      persiapanPort += portPlan;
+      persiapanLop += 1;
+    } else if (
+      status === "02. Material Delivery" ||
+      status === "02. Matdel"
+    ) {
+      matdelPort += portPlan;
+      matdelLop += 1;
+    } else if (status === "03. OGP Instalasi") {
+      ogpPort += portPlan;
+      ogpLop += 1;
+    } else if (status === "04. Finish Instalasi") {
+      finishPort += portPlan;
+      finishLop += 1;
+    }
+  }
+
+  return {
+    totalLop: data.length,
+    totalPortPlan,
+    totalPortReal,
+    realizationRate:
+      totalPortPlan > 0 ? (totalPortReal / totalPortPlan) * 100 : 0,
+    dropPort,
+    dropLop,
+    dropPct: totalPortPlan > 0 ? (dropPort / totalPortPlan) * 100 : 0,
+    persiapanPort,
+    persiapanLop,
+    persiapanPct:
+      totalPortPlan > 0 ? (persiapanPort / totalPortPlan) * 100 : 0,
+    matdelPort,
+    matdelLop,
+    matdelPct: totalPortPlan > 0 ? (matdelPort / totalPortPlan) * 100 : 0,
+    ogpPort,
+    ogpLop,
+    ogpPct: totalPortPlan > 0 ? (ogpPort / totalPortPlan) * 100 : 0,
+    finishPort,
+    finishLop,
+    finishPct: totalPortPlan > 0 ? (finishPort / totalPortPlan) * 100 : 0,
+    // Port Real is the authoritative realized/go-live port total. It can be
+    // populated before the construction-status column is corrected.
+    goLivePort: totalPortReal,
+    goLiveLop,
+    goLivePct:
+      totalPortPlan > 0 ? (totalPortReal / totalPortPlan) * 100 : 0,
+  };
+}

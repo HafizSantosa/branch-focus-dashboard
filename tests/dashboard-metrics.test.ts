@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildConstructionPipeline,
+  buildKpiMetrics,
   createDefaultFilterState,
   createEmptyFilterState,
   getDefaultPrioFlags,
@@ -106,4 +107,23 @@ test("isDefaultFilterState detects when filters match default vs modified", () =
     area: ["AREA 1"],
   };
   assert.equal(isDefaultFilterState(modifiedState, options), false);
+});
+
+test("Port Go Live counts Port Real even when construction status is not Go Live", () => {
+  const metrics = buildKpiMetrics([
+    {
+      statusKonstruksi: "00. Propose Drop",
+      portPlan: 64,
+      portReal: 64,
+    },
+    {
+      statusKonstruksi: "05. Go Live",
+      portPlan: 96,
+      portReal: 0,
+    },
+  ]);
+
+  assert.equal(metrics.goLivePort, 64);
+  assert.equal(metrics.goLiveLop, 1);
+  assert.equal(metrics.totalPortReal, 64);
 });
