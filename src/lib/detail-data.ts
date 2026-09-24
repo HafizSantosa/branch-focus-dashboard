@@ -24,7 +24,13 @@ export type DetailDataColumnKey = (typeof DETAIL_DATA_COLUMNS)[number]["key"];
 
 function escapeCsv(value: LopRecord[DetailDataColumnKey]): string {
   if (value === null || value === undefined) return '""';
-  return `"${String(value).replace(/"/g, '""')}"`;
+  const text = String(value);
+  // Spreadsheet apps can execute formulas even when a CSV cell is quoted.
+  const safe =
+    typeof value === "string" && /^[\s\u0000-\u001f\uFEFF]*[=+\-@]/u.test(text)
+      ? `'${text}`
+      : text;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 export function buildDetailCsv(records: readonly LopRecord[]): string {

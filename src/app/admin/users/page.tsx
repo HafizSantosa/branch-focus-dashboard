@@ -407,7 +407,7 @@ export default function AdminUsersPage() {
                     <ShieldCheck className="w-4 h-4" /> Admin
                   </div>
                   <p className="text-[11px] text-slate-500 leading-tight">
-                    Akses penuh: kelola pengguna, ubah URL data sheet, dan ekspor CSV.
+                    Akses penuh: kelola pengguna, ubah URL data sheet, kelola backup, dan unduh CSV.
                   </p>
                 </button>
 
@@ -424,7 +424,7 @@ export default function AdminUsersPage() {
                     <Eye className="w-4 h-4" /> Viewer
                   </div>
                   <p className="text-[11px] text-slate-500 leading-tight">
-                    Hanya lihat: navigasi dashboard dan filtering tanpa hak ekspor.
+                    Lihat dashboard, filter data, dan unduh CSV Detail Data; tidak dapat mengelola pengguna atau backup.
                   </p>
                 </button>
               </div>

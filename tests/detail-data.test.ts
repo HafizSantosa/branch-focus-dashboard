@@ -58,3 +58,21 @@ test("detail table and CSV use the requested columns in the requested order", ()
     '"LOP-1","64","32","AREA 1","SUMBAGTENG","PADANG","PT3","Fiberhome","Sudah WO","Prio September","20 Branch","05. Go Live","Ready","Izin, ROW"'
   );
 });
+
+test("CSV exports neutralize spreadsheet formulas without altering numeric cells", () => {
+  const csv = buildDetailCsv([{
+    ...record,
+    ihldLopId: "=1+1",
+    branch: "+SUM(1,2)",
+    mitra: "-CMD",
+    statusMaterial: "@SUM(1,2)",
+    groupingKendala: "\t=HYPERLINK(\"https://example.test\")",
+    portPlan: -5,
+  }]);
+  assert.ok(csv.includes("\"'=1+1\""));
+  assert.ok(csv.includes("\"'+SUM(1,2)\""));
+  assert.ok(csv.includes("\"'-CMD\""));
+  assert.ok(csv.includes("\"'@SUM(1,2)\""));
+  assert.ok(csv.includes("\"'\t=HYPERLINK(\"\"https://example.test\"\")\""));
+  assert.ok(csv.includes("\"-5\""));
+});

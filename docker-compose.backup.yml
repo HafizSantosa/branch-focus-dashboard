@@ -1,6 +1,0 @@
-services:
-  app:
-    volumes:
-      - ${GOOGLE_DRIVE_BACKUP_CREDENTIALS_DIR:-./secrets}:/run/secrets:ro
-    environment:
-      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-drive-service-account.json

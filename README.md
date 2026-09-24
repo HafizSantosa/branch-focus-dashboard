@@ -6,12 +6,12 @@ Executive dashboard for monitoring infrastructure rollout, construction stages, 
 
 - **Application:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS, and Recharts.
 - **Authentication:** NextAuth.js v4 credentials with signed JWT sessions. Every server authorization decision resolves the current user from SQLite, so role and account-status changes take effect without waiting for a new login.
-- **Roles:** `admin` manages users, the global spreadsheet source, and CSV exports; `viewer` has read-only analytical access.
+- **Roles:** `admin` manages users, the global spreadsheet source, and local backups; `viewer` has read-only analytical access and can download filtered Detail Data CSVs.
 - **Database:** SQLite through `better-sqlite3`, using WAL mode under `data/users.db`.
 - **Dashboard data:** one server-owned SQLite snapshot is shared by every user, refreshed from a validated `docs.google.com` source on a configurable schedule. Open dashboards check for the latest snapshot every 30 seconds.
 - **Email:** Nodemailer SMTP for account verification. Ethereal is used only in development when SMTP is absent.
 - **Deployment:** standalone Node.js container, non-root UID 1001, read-only root filesystem, dropped Linux capabilities, health checks, and bounded JSON logs.
-- **Daily CSV backup:** optional unfiltered Detail Data exports to Google Drive with restart catch-up, one-file-per-day protection, and administrator-visible status.
+- **Daily CSV backup:** unfiltered Detail Data exports to the persistent VPS Docker volume with restart catch-up, one-file-per-day protection, and administrator-visible status.
 
 ## Local development
 
@@ -51,10 +51,10 @@ Optional values:
 | `TRUST_PROXY` | `true` | Trust `X-Forwarded-For` from the local reverse proxy for registration throttling |
 | `ALLOW_PUBLIC_REGISTRATION` | `false` | Allow self-service viewer registration via `/register`; keep `false` for private deployments |
 | `DATA_SYNC_INTERVAL_SECONDS` | `300` | Server-side Google Sheet refresh interval, clamped between 30 seconds and 24 hours |
-| `GOOGLE_DRIVE_BACKUP_ENABLED` | `false` | Enable the daily unfiltered Detail Data CSV backup |
-| `GOOGLE_DRIVE_BACKUP_FOLDER_ID` | none | Destination Google Drive folder ID |
-| `GOOGLE_DRIVE_BACKUP_DAILY_AT` | `02:00` | Daily backup time in 24-hour `HH:mm` format |
-| `GOOGLE_DRIVE_BACKUP_TIMEZONE` | `Asia/Jakarta` | IANA time zone used for the daily schedule and filename date |
+| `LOCAL_BACKUP_ENABLED` | `true` | Write daily unfiltered CSV backups to the persistent `app-data` volume |
+| `LOCAL_BACKUP_DAILY_AT` | `02:00` | Daily backup time in 24-hour `HH:mm` format |
+| `LOCAL_BACKUP_TIMEZONE` | `Asia/Jakarta` | IANA time zone for schedule and filename date |
+| `LOCAL_BACKUP_KEEP_DAYS` | `30` | Number of daily CSV files to retain |
 
 Production Compose refuses to start without `NEXTAUTH_URL` and `NEXTAUTH_SECRET`. Never reuse the example secret or commit `.env`.
 
@@ -114,11 +114,8 @@ curl --fail http://127.0.0.1:3001/api/health
 # Logs
 docker compose logs -f app
 
-# Upgrade (including browser-managed Drive credentials)
+# Upgrade
 docker compose up -d --build
-
-# Only for externally mounted Drive credentials
-docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d --build
 
 # Stop
 docker compose down
@@ -138,40 +135,37 @@ Then copy the backup off the container and verify it can be opened:
 docker compose cp app:/app/data/backup.db ./backup.db
 ```
 
-### Daily unfiltered CSV backup to Google Drive
+### Daily unfiltered CSV backup on the VPS
 
-The daily export uses the same 14-column contract as the Detail Data table, but always reads the complete shared snapshot without dashboard filters, table search, sorting, or pagination.
+The app saves `LOP_Detail_Unfiltered_YYYY-MM-DD.csv` in `/app/data/backups/`
+inside the persistent `app-data` Docker volume. CSVs use the same 14 columns
+as Detail Data and always include the complete shared snapshot, not dashboard
+filters, table search, sorting, or pagination. The default schedule is
+02:00 Asia/Jakarta; missed backups run on restart after the scheduled time,
+and failures retry after an hour.
 
-1. Enable the Google Drive API in a Google Cloud project.
-2. Create a service account and download its JSON key.
-3. Add the service-account email as an editor of the destination folder. A Shared Drive is recommended because service accounts do not have personal Drive storage quota.
+The admin-only **Backup** tab shows the schedule, status, and retained files.
+Admins can start a backup immediately and download individual CSVs. The
+application keeps the 30 most recent daily CSV files by default. Set
+`LOCAL_BACKUP_ENABLED=false` to disable scheduled backups.
 
-4. Configure `.env`:
+These files share the VPS and Docker volume with the app: they do **not**
+protect against VPS or volume loss. Regularly download or copy backups to
+independent storage; do not use `docker compose down -v` unless you intend to
+delete the database and CSV backups.
 
-```dotenv
-GOOGLE_DRIVE_BACKUP_ENABLED=true
-GOOGLE_DRIVE_BACKUP_FOLDER_ID=your-google-drive-folder-id
-GOOGLE_DRIVE_BACKUP_DAILY_AT=02:00
-GOOGLE_DRIVE_BACKUP_TIMEZONE=Asia/Jakarta
-```
-
-5. Deploy normally for browser upload:
+For an existing deployment that used the removed Drive integration, remove
+`GOOGLE_DRIVE_BACKUP_*` and `GOOGLE_APPLICATION_CREDENTIALS` entries from its
+VPS `.env`. After deploying the updated image, remove the obsolete uploaded
+credential and status entry without deleting the `app-data` volume:
 
 ```bash
-docker compose up -d --build
+docker compose exec app rm -f /app/data/secrets/google-drive-service-account.json
+docker compose exec app node -e "const D=require('better-sqlite3');const d=new D('/app/data/users.db');d.prepare('DELETE FROM app_settings WHERE key = ?').run('google_drive_backup_status');d.close()"
 ```
 
-6. Sign in as an administrator over HTTPS. In dashboard settings under
-   **Backup CSV Harian**, select the downloaded service-account JSON and click
-   **Unggah Kunci**. The upload endpoint accepts at most 32 KB, validates the
-   service-account key, and stores it mode `0600` in the persistent `app-data`
-   volume; it never appears in Git, container images, or API responses.
-
-Alternatively, an operator with SSH/SFTP can mount a read-only credential with
-`docker-compose.backup.yml` and set `GOOGLE_APPLICATION_CREDENTIALS` to that
-mounted path; dashboard upload is unavailable in that mode.
-
-The application synchronizes the sheet before each backup and writes `LOP_Detail_Unfiltered_YYYY-MM-DD.csv`. It records the Drive file ID, row count, SHA-256 checksum, last success, and last error in SQLite. Browser upload starts the first backup immediately when enabled; afterward the scheduled backup runs once per Jakarta calendar day. A restart after the scheduled time catches up a missing backup; failed attempts retry after one hour. Administrators can see the latest status and open the Drive folder from the settings dialog.
+If a host-mounted copy was used, remove that copy separately after confirming
+it is no longer needed. This cleanup does not affect `/app/data/backups/`.
 
 ## Security behavior
 

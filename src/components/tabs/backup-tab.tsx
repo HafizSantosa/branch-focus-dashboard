@@ -33,6 +33,7 @@ interface BackupStatusResponse {
   fileName?: string;
   rowCount?: number;
   error?: string;
+  alreadyExists?: boolean;
   files: BackupFile[];
 }
 
@@ -95,8 +96,9 @@ export function BackupTab() {
         throw new Error("error" in payload && payload.error ? payload.error : "Backup gagal.");
       }
       const result = payload as BackupStatusResponse;
-      setRunMessage(
-        `Backup selesai: ${result.fileName ?? ""} (${result.rowCount ?? 0} baris).`
+      setRunMessage(result.alreadyExists
+        ? `Backup untuk tanggal ini sudah tersedia: ${result.fileName}.`
+        : `Backup selesai: ${result.fileName ?? ""} (${result.rowCount ?? 0} baris).`
       );
       refresh();
     } catch (err) {
@@ -106,17 +108,16 @@ export function BackupTab() {
     }
   };
 
-  if (error) {
-    return (
-      <div className="flex items-start gap-2 p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm">
-        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-        <span>{error}</span>
-      </div>
-    );
-  }
-
   if (!status) {
-    return (
+    return error ? (
+      <div role="alert" className="flex flex-wrap items-center gap-2 p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm">
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        <span>{error}</span>
+        <Button variant="outline" size="sm" onClick={() => refresh()}>
+          Coba Lagi
+        </Button>
+      </div>
+    ) : (
       <div className="flex items-center gap-2 p-4 text-slate-500 text-sm">
         <Loader2 className="w-4 h-4 animate-spin" />
         <span>Memuat data backup...</span>
@@ -159,6 +160,11 @@ export function BackupTab() {
           </Button>
         </div>
       </div>
+      {error && (
+        <p role="alert" className="text-xs text-rose-700">
+          Gagal memperbarui status: {error}. Daftar terakhir tetap tersedia.
+        </p>
+      )}
 
       {/* Schedule info */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
@@ -172,7 +178,7 @@ export function BackupTab() {
         </div>
         <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-0.5">
           <p className="text-slate-500">Retensi</p>
-          <p className="font-semibold text-slate-800">{status.keepDays} hari terakhir</p>
+          <p className="font-semibold text-slate-800">{status.keepDays} backup terakhir</p>
         </div>
         <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-0.5">
           <p className="text-slate-500">Status terakhir</p>
