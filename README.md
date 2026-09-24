@@ -114,10 +114,10 @@ curl --fail http://127.0.0.1:3001/api/health
 # Logs
 docker compose logs -f app
 
-# Upgrade without Drive backup
+# Upgrade (including browser-managed Drive credentials)
 docker compose up -d --build
 
-# Upgrade when Drive backup is enabled
+# Only for externally mounted Drive credentials
 docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d --build
 
 # Stop
@@ -145,16 +145,8 @@ The daily export uses the same 14-column contract as the Detail Data table, but 
 1. Enable the Google Drive API in a Google Cloud project.
 2. Create a service account and download its JSON key.
 3. Add the service-account email as an editor of the destination folder. A Shared Drive is recommended because service accounts do not have personal Drive storage quota.
-4. Install the credential outside Git:
 
-```bash
-mkdir -p secrets
-cp /secure/path/service-account.json secrets/google-drive-service-account.json
-sudo chown 1001:1001 secrets/google-drive-service-account.json
-sudo chmod 600 secrets/google-drive-service-account.json
-```
-
-5. Configure `.env`:
+4. Configure `.env`:
 
 ```dotenv
 GOOGLE_DRIVE_BACKUP_ENABLED=true
@@ -163,13 +155,23 @@ GOOGLE_DRIVE_BACKUP_DAILY_AT=02:00
 GOOGLE_DRIVE_BACKUP_TIMEZONE=Asia/Jakarta
 ```
 
-6. Start with the optional credential-mount overlay:
+5. Deploy normally for browser upload:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d --build
+docker compose up -d --build
 ```
 
-The application synchronizes the sheet before each backup and writes `LOP_Detail_Unfiltered_YYYY-MM-DD.csv`. It records the Drive file ID, row count, SHA-256 checksum, last success, and last error in SQLite. A restart after the scheduled time catches up the missing backup; failed attempts retry after one hour. Administrators can see the latest status and open the Drive folder from the settings dialog.
+6. Sign in as an administrator over HTTPS. In dashboard settings under
+   **Backup CSV Harian**, select the downloaded service-account JSON and click
+   **Unggah Kunci**. The upload endpoint accepts at most 32 KB, validates the
+   service-account key, and stores it mode `0600` in the persistent `app-data`
+   volume; it never appears in Git, container images, or API responses.
+
+Alternatively, an operator with SSH/SFTP can mount a read-only credential with
+`docker-compose.backup.yml` and set `GOOGLE_APPLICATION_CREDENTIALS` to that
+mounted path; dashboard upload is unavailable in that mode.
+
+The application synchronizes the sheet before each backup and writes `LOP_Detail_Unfiltered_YYYY-MM-DD.csv`. It records the Drive file ID, row count, SHA-256 checksum, last success, and last error in SQLite. Browser upload starts the first backup immediately when enabled; afterward the scheduled backup runs once per Jakarta calendar day. A restart after the scheduled time catches up a missing backup; failed attempts retry after one hour. Administrators can see the latest status and open the Drive folder from the settings dialog.
 
 ## Security behavior
 

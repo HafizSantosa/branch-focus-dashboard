@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import path from "node:path";
 import { Readable } from "node:stream";
 import type { drive_v3 } from "googleapis";
 import { settingsDb, type SheetSnapshot } from "@/lib/db";
@@ -63,13 +64,23 @@ function normalizeDailyTime(value: string | undefined): string {
     : DEFAULT_BACKUP_TIME;
 }
 
+export function getManagedCredentialPath(): string {
+  const dbPath =
+    process.env.DB_PATH || path.join(process.cwd(), "data", "users.db");
+  return path.join(
+    path.dirname(dbPath),
+    "secrets",
+    "google-drive-service-account.json"
+  );
+}
+
 export function getDriveBackupConfig(
   env: NodeJS.ProcessEnv = process.env
 ): DriveBackupConfig {
   const folderId = env.GOOGLE_DRIVE_BACKUP_FOLDER_ID?.trim() || "";
   const credentialsFile =
     env.GOOGLE_APPLICATION_CREDENTIALS?.trim() ||
-    "/run/secrets/google-drive-service-account.json";
+    getManagedCredentialPath();
   const requestedTimeZone =
     env.GOOGLE_DRIVE_BACKUP_TIMEZONE?.trim() || DEFAULT_TIME_ZONE;
   const timeZone = isValidTimeZone(requestedTimeZone)

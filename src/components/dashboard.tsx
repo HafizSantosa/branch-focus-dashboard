@@ -103,6 +103,26 @@ interface BackupStatusResponse {
   rowCount?: number;
   error?: string;
   folderUrl?: string;
+  credentialInstalled: boolean;
+  credentialUploadAvailable: boolean;
+}
+
+async function fetchBackupStatus(signal?: AbortSignal): Promise<BackupStatusResponse> {
+  const response = await fetch("/api/admin/backup", {
+    cache: "no-store",
+    signal,
+  });
+  const payload = (await response.json()) as
+    | BackupStatusResponse
+    | { error?: string };
+  if (!response.ok) {
+    throw new Error(
+      "error" in payload && payload.error
+        ? payload.error
+        : "Gagal memuat status backup."
+    );
+  }
+  return payload as BackupStatusResponse;
 }
 
 export function Dashboard({
@@ -142,6 +162,13 @@ export function Dashboard({
   const [backupStatusError, setBackupStatusError] = useState<string | null>(
     null
   );
+  const [credentialFile, setCredentialFile] = useState<File | null>(null);
+  const [isUploadingCredential, setIsUploadingCredential] = useState(false);
+  const [credentialUploadMessage, setCredentialUploadMessage] =
+    useState<string | null>(null);
+  const [credentialUploadError, setCredentialUploadError] =
+    useState<string | null>(null);
+  const credentialInputRef = useRef<HTMLInputElement>(null);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -203,37 +230,68 @@ export function Dashboard({
       window.clearInterval(interval);
     };
   }, [applySnapshot]);
+  const refreshBackupStatus = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const status = await fetchBackupStatus(signal);
+      setBackupStatusError(null);
+      setBackupStatus(status);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setBackupStatusError(
+        error instanceof Error ? error.message : "Gagal memuat status backup."
+      );
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAdmin || !isSettingsOpen) return;
     const controller = new AbortController();
-
-    fetch("/api/admin/backup", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const payload = (await response.json()) as
-          | BackupStatusResponse
-          | { error?: string };
-        if (!response.ok) {
-          throw new Error(
-            "error" in payload && payload.error
-              ? payload.error
-              : "Gagal memuat status backup."
-          );
-        }
+    void fetchBackupStatus(controller.signal)
+      .then((status) => {
         setBackupStatusError(null);
-        setBackupStatus(payload as BackupStatusResponse);
+        setBackupStatus(status);
       })
-      .catch((error: unknown) => {
+      .catch((error) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setBackupStatusError(
           error instanceof Error ? error.message : "Gagal memuat status backup."
         );
       });
-
     return () => controller.abort();
   }, [isAdmin, isSettingsOpen]);
+
+  const handleCredentialUpload = async () => {
+    if (!credentialFile || isUploadingCredential) return;
+    setIsUploadingCredential(true);
+    setCredentialUploadError(null);
+    setCredentialUploadMessage(null);
+    try {
+      const response = await fetch("/api/admin/backup/credential", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: credentialFile,
+      });
+      const payload = (await response.json()) as {
+        email?: string;
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || "Gagal menyimpan kredensial.");
+      }
+      setCredentialUploadMessage(
+        `Kunci disimpan untuk ${payload.email}. Backup pertama dimulai jika fitur aktif.`
+      );
+      setCredentialFile(null);
+      if (credentialInputRef.current) credentialInputRef.current.value = "";
+      await refreshBackupStatus();
+    } catch (error) {
+      setCredentialUploadError(
+        error instanceof Error ? error.message : "Gagal mengunggah kredensial."
+      );
+    } finally {
+      setIsUploadingCredential(false);
+    }
+  };
 
   // A manual sync replaces the one shared server snapshot. Admin source
   // changes are validated and committed with the resulting snapshot.
@@ -704,7 +762,7 @@ export function Dashboard({
 
       {/* Google Spreadsheet Sync Dialog Modal */}
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="sm:max-w-xl bg-white p-6">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto bg-white p-6">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-blue-600" />
@@ -794,6 +852,11 @@ export function Dashboard({
                 <p className="text-[11px] text-slate-600">
                   Backup Google Drive belum diaktifkan.
                 </p>
+              ) : !backupStatus.credentialInstalled ? (
+                <p className="text-[11px] text-rose-700">
+                  Backup aktif, tetapi kunci service account belum tersedia.
+                  Unggah file JSON di bawah untuk memulai backup pertama.
+                </p>
               ) : !backupStatus.configured ? (
                 <p className="text-[11px] text-rose-700">
                   Backup aktif, tetapi folder atau kredensial belum valid.
@@ -846,6 +909,74 @@ export function Dashboard({
                         Percobaan terakhir gagal: {backupStatus.error}
                       </p>
                     )}
+                </div>
+              )}
+              {backupStatus && (
+                <div className="space-y-2 border-t border-slate-200 pt-2">
+                  <p className="text-[11px] text-slate-600">
+                    Kunci service account:{" "}
+                    <strong>
+                      {backupStatus.credentialInstalled
+                        ? "tersimpan di volume Docker"
+                        : "belum tersedia"}
+                    </strong>
+                  </p>
+                  {backupStatus.credentialUploadAvailable ? (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="backup-credential-file"
+                        className="block text-[11px] text-slate-600"
+                      >
+                        Pilih file JSON dari komputer Anda. Kunci tidak ditampilkan
+                        dan hanya dapat diunggah oleh admin.
+                      </label>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          id="backup-credential-file"
+                          ref={credentialInputRef}
+                          type="file"
+                          accept=".json,application/json"
+                          onChange={(event) =>
+                            setCredentialFile(event.target.files?.[0] ?? null)
+                          }
+                          className="max-w-full text-[11px] text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-white file:px-2 file:py-1 file:text-blue-700"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={!credentialFile || isUploadingCredential}
+                          onClick={handleCredentialUpload}
+                          className="h-7 text-[11px]"
+                        >
+                          {isUploadingCredential
+                            ? "Mengunggah..."
+                            : "Unggah Kunci"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-500">
+                      Kunci dipasang dari luar container; upload melalui dashboard
+                      tidak tersedia.
+                    </p>
+                  )}
+                  {credentialUploadError && (
+                    <p role="alert" className="text-[11px] text-rose-700">
+                      {credentialUploadError}
+                    </p>
+                  )}
+                  {credentialUploadMessage && (
+                    <p role="status" className="text-[11px] text-emerald-700">
+                      {credentialUploadMessage}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    className="text-[11px] text-blue-600 hover:underline"
+                    onClick={() => void refreshBackupStatus()}
+                  >
+                    Muat ulang status backup
+                  </button>
                 </div>
               )}
             </div>

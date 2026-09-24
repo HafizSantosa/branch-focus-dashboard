@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  credentialInstalled,
+  credentialUploadAvailable,
+} from "@/lib/backup-credential";
 import { getDriveBackupStatus } from "@/lib/drive-backup";
 import { authorizeApi } from "@/lib/server-auth";
 
@@ -8,7 +12,12 @@ export async function GET() {
   const { response } = await authorizeApi("admin");
   if (response) return response;
 
-  return NextResponse.json(getDriveBackupStatus(), {
-    headers: { "Cache-Control": "no-store" },
-  });
+  return NextResponse.json(
+    {
+      ...getDriveBackupStatus(),
+      credentialInstalled: await credentialInstalled(),
+      credentialUploadAvailable: credentialUploadAvailable(),
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }

@@ -6,5 +6,7 @@ out
 .env.*
 data
 users.json
+secrets
+secret
 *.csv
 npm-debug.log*
