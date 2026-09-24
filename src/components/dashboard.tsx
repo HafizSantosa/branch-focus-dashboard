@@ -26,6 +26,7 @@ import {
   Eye,
   Users,
   KeyRound,
+  HardDrive,
 } from "lucide-react";
 import { LopRecord, FilterState, FilterOptions } from "@/types/lop";
 import {
@@ -52,6 +53,7 @@ import { PortTab } from "@/components/tabs/port-tab";
 import { DetailTab } from "@/components/tabs/detail-tab";
 import { RekapTab } from "@/components/tabs/rekap-tab";
 import { MaterialTab } from "@/components/tabs/material-tab";
+import { BackupTab } from "@/components/tabs/backup-tab";
 import { formatNumber } from "@/lib/utils";
 import { useAuth, logout } from "@/components/auth-provider";
 
@@ -727,6 +729,16 @@ export function Dashboard({
                   <Database className="w-3.5 h-3.5" />
                   <span>Detail Data</span>
                 </TabsTrigger>
+
+                {isAdmin && (
+                  <TabsTrigger
+                    value="backup"
+                    className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-lg px-3.5 py-1.5 text-xs font-medium flex items-center gap-2 transition-all"
+                  >
+                    <HardDrive className="w-3.5 h-3.5" />
+                    <span>Backup</span>
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <div className="text-xs text-slate-500 hidden md:block">
@@ -756,6 +768,12 @@ export function Dashboard({
             <TabsContent value="detail" className="mt-0 focus-visible:outline-none">
               <DetailTab data={filteredData} />
             </TabsContent>
+
+            {isAdmin && (
+              <TabsContent value="backup" className="mt-0 focus-visible:outline-none">
+                <BackupTab />
+              </TabsContent>
+            )}
           </Tabs>
         </main>
       </div>
