@@ -134,7 +134,10 @@ export function DetailTab({ data }: DetailTabProps) {
       const valA = a[sortField];
       const valB = b[sortField];
 
-      if (valA === null || valA === undefined) return sortDir === "asc" ? 1 : -1;
+      if (valA === null || valA === undefined) {
+        if (valB === null || valB === undefined) return 0;
+        return sortDir === "asc" ? 1 : -1;
+      }
       if (valB === null || valB === undefined) return sortDir === "asc" ? -1 : 1;
 
       if (typeof valA === "number" && typeof valB === "number") {
@@ -166,9 +169,9 @@ export function DetailTab({ data }: DetailTabProps) {
 
   // CSV export uses the same ordered column contract as the visible table.
   const handleExportCsv = () => {
-    if (data.length === 0) return;
+    if (sortedData.length === 0) return;
 
-    const blob = new Blob([buildDetailCsv(data)], {
+    const blob = new Blob([buildDetailCsv(sortedData)], {
       type: "text/csv;charset=utf-8;",
     });
     const url = URL.createObjectURL(blob);

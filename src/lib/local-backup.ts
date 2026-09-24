@@ -5,6 +5,7 @@ import {
   open,
   readFile,
   readdir,
+  rename,
   stat,
   unlink,
 } from "node:fs/promises";
@@ -197,9 +198,13 @@ async function pruneOldBackups(config: LocalBackupConfig): Promise<void> {
   const files = await listLocalBackups(config);
   const toDelete = files.slice(config.keepDays);
   for (const f of toDelete) {
-    await unlink(path.join(config.backupDir, f.fileName)).catch((error: NodeJS.ErrnoException) => {
-      if (error.code !== "ENOENT") throw error;
-    });
+    await unlink(path.join(config.backupDir, f.fileName)).catch(
+      (error: NodeJS.ErrnoException) => {
+        // ENOENT: already gone. EBUSY/EPERM: Windows file lock — skip silently.
+        if (error.code !== "ENOENT" && error.code !== "EBUSY" && error.code !== "EPERM")
+          throw error;
+      }
+    );
   }
 }
 
@@ -220,15 +225,20 @@ async function statusForExistingFile(
   if (!info.isFile() || info.size === 0) {
     throw new Error(`Existing backup is not a valid file: ${fileName}`);
   }
-  const content = await readFile(filePath);
+  const content = await readFile(filePath, "utf8");
+  const dataLines = content.split("\n").filter((l) => l.trim()).length - 1; // subtract header
   return {
     outcome: "success",
     lastAttemptAt: attemptedAt,
-    lastSuccessAt: previous?.fileName === fileName && previous.lastSuccessAt
-      ? previous.lastSuccessAt : Math.floor(info.mtimeMs / 1_000),
+    lastSuccessAt:
+      previous?.fileName === fileName && previous.lastSuccessAt
+        ? previous.lastSuccessAt
+        : Math.floor(info.mtimeMs / 1_000),
     lastSuccessDate: date,
     fileName,
-    rowCount: previous?.fileName === fileName ? previous.rowCount : undefined,
+    rowCount: previous?.fileName === fileName && previous.rowCount != null
+      ? previous.rowCount
+      : Math.max(0, dataLines),
     checksum: createHash("sha256").update(content).digest("hex"),
   };
 }
@@ -247,11 +257,27 @@ async function publishBackup(filePath: string, csv: string): Promise<void> {
     } finally {
       await file.close();
     }
-    // A hard link publishes atomically and fails if this date already exists.
-    await link(temporary, filePath);
+    // Try an atomic hard-link first; fall back to rename on filesystems that
+    // do not support links (FAT32, exFAT, ReFS, network shares).
+    try {
+      await link(temporary, filePath);
+    } catch (linkError) {
+      if (
+        (linkError as NodeJS.ErrnoException).code !== "EXDEV" &&
+        (linkError as NodeJS.ErrnoException).code !== "ENOTSUP" &&
+        (linkError as NodeJS.ErrnoException).code !== "EPERM"
+      ) {
+        throw linkError;
+      }
+      // Atomic rename works on same filesystem even without hard-link support.
+      await rename(temporary, filePath);
+      return; // tmp is gone — skip unlink in finally
+    }
   } finally {
+    // Tolerate Windows EBUSY/EPERM from antivirus/indexer holding the tmp handle.
     await unlink(temporary).catch((error: NodeJS.ErrnoException) => {
-      if (error.code !== "ENOENT") throw error;
+      if (error.code !== "ENOENT" && error.code !== "EBUSY" && error.code !== "EPERM")
+        throw error;
     });
   }
 }
@@ -292,7 +318,9 @@ export async function runLocalBackup(
         filePath, fileName, local.date, nowSeconds, previous
       );
       if (existing) {
-        await pruneOldBackups(config);
+        await pruneOldBackups(config).catch((e) => {
+          console.warn("[local-backup] Pruning old backups failed (non-fatal):", e);
+        });
         writeStoredStatus(existing);
         return { ...existing, alreadyExists: true };
       }
@@ -308,7 +336,9 @@ export async function runLocalBackup(
           filePath, fileName, local.date, nowSeconds, previous
         );
         if (!concurrent) throw error;
-        await pruneOldBackups(config);
+        await pruneOldBackups(config).catch((e) => {
+          console.warn("[local-backup] Pruning old backups failed (non-fatal):", e);
+        });
         writeStoredStatus(concurrent);
         return { ...concurrent, alreadyExists: true };
       }
@@ -324,7 +354,11 @@ export async function runLocalBackup(
       };
       writeStoredStatus(status);
 
-      await pruneOldBackups(config);
+      // Prune AFTER persisting success status so a prune failure does not
+      // overwrite the success record in the catch block below.
+      await pruneOldBackups(config).catch((pruneError) => {
+        console.warn("[local-backup] Pruning old backups failed (non-fatal):", pruneError);
+      });
 
       console.info(
         `[local-backup] Saved ${fileName} (${snapshot.records.length} rows).`

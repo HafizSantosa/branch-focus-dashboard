@@ -45,7 +45,7 @@ test("detail table and CSV use the requested columns in the requested order", ()
       "Cek WO",
       "Flag",
       "Prioritas 20 Branch",
-      "Status Kontruksi",
+      "Status Konstruksi",
       "Status Material",
       "Grouping Kendala",
     ]

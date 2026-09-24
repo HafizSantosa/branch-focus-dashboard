@@ -12,7 +12,7 @@ export const DETAIL_DATA_COLUMNS = [
   { key: "cekWo", label: "Cek WO" },
   { key: "prioFlag", label: "Flag" },
   { key: "prioritas20Branch", label: "Prioritas 20 Branch" },
-  { key: "statusKonstruksi", label: "Status Kontruksi" },
+  { key: "statusKonstruksi", label: "Status Konstruksi" },
   { key: "statusMaterial", label: "Status Material" },
   { key: "groupingKendala", label: "Grouping Kendala" },
 ] as const satisfies ReadonlyArray<{
@@ -25,9 +25,12 @@ export type DetailDataColumnKey = (typeof DETAIL_DATA_COLUMNS)[number]["key"];
 function escapeCsv(value: LopRecord[DetailDataColumnKey]): string {
   if (value === null || value === undefined) return '""';
   const text = String(value);
-  // Spreadsheet apps can execute formulas even when a CSV cell is quoted.
+  // Sanitise formula injection prefixes (=, +, @, and - only when followed by
+  // a formula character). Bare hyphens ("-") and negative numbers ("-5") are
+  // NOT sanitised so they round-trip cleanly through spreadsheet apps.
   const safe =
-    typeof value === "string" && /^[\s\u0000-\u001f\uFEFF]*[=+\-@]/u.test(text)
+    typeof value === "string" &&
+    /^[\s\u0000-\u001f\uFEFF]*(?:[=+@]|-(?=[=+@A-Za-z]))/u.test(text)
       ? `'${text}`
       : text;
   return `"${safe.replace(/"/g, '""')}"`;

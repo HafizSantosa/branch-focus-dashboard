@@ -96,10 +96,11 @@ export function BackupTab() {
         throw new Error("error" in payload && payload.error ? payload.error : "Backup gagal.");
       }
       const result = payload as BackupStatusResponse;
-      setRunMessage(result.alreadyExists
-        ? `Backup untuk tanggal ini sudah tersedia: ${result.fileName}.`
-        : `Backup selesai: ${result.fileName ?? ""} (${result.rowCount ?? 0} baris).`
-      );
+      if (result.alreadyExists) {
+        setRunMessage(`already:Backup untuk tanggal ini sudah ada: ${result.fileName ?? result.lastSuccessDate ?? "hari ini"}.`);
+      } else {
+        setRunMessage(`Backup selesai: ${result.fileName ?? ""} (${result.rowCount ?? 0} baris).`);
+      }
       refresh();
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "Backup gagal.");
@@ -202,10 +203,17 @@ export function BackupTab() {
 
       {/* Run now feedback */}
       {runMessage && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
-          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-          <span>{runMessage}</span>
-        </div>
+        runMessage.startsWith("already:") ? (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>{runMessage.slice("already:".length)}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+            <span>{runMessage}</span>
+          </div>
+        )
       )}
       {runError && (
         <div className="flex items-start gap-2 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
@@ -245,12 +253,10 @@ export function BackupTab() {
                 <a
                   href={`/api/admin/backup/local/${encodeURIComponent(f.fileName)}`}
                   download={f.fileName}
-                  className="ml-3 shrink-0"
+                  className="ml-3 shrink-0 inline-flex items-center gap-1 h-7 px-2 text-xs rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors"
                 >
-                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                    <Download className="w-3 h-3" />
-                    Unduh
-                  </Button>
+                  <Download className="w-3 h-3" />
+                  Unduh
                 </a>
               </div>
             ))}

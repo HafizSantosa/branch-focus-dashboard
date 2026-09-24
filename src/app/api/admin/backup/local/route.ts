@@ -13,16 +13,22 @@ export async function GET() {
   const { response } = await authorizeApi("admin");
   if (response) return response;
 
-  const [status, files] = await Promise.all([
-    Promise.resolve(getLocalBackupStatus()),
-    listLocalBackups(),
-  ]);
-  const config = getLocalBackupConfig();
-
-  return NextResponse.json(
-    { ...status, files, backupDir: config.backupDir },
-    { headers: { "Cache-Control": "no-store" } }
-  );
+  try {
+    const [status, files] = await Promise.all([
+      Promise.resolve(getLocalBackupStatus()),
+      listLocalBackups(),
+    ]);
+    const config = getLocalBackupConfig();
+    return NextResponse.json(
+      { ...status, files, backupDir: config.backupDir },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Gagal memuat status backup." },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST() {
