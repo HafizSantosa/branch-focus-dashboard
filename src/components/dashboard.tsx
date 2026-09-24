@@ -470,14 +470,14 @@ export function Dashboard({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Top Navbar */}
-        <header className="h-16 px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between shrink-0 z-10">
-          <div className="flex items-center gap-2 sm:gap-3">
+        <header className="h-14 sm:h-16 px-3 sm:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between shrink-0 z-10 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {/* Desktop Sidebar Toggle Button */}
             <Button
               variant="outline"
               size="icon"
               onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-              className="hidden lg:flex h-9 w-9 bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-xs"
+              className="hidden lg:flex h-9 w-9 bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-xs shrink-0"
               title={isSidebarCollapsed ? "Buka Sidebar Filter" : "Tutup Sidebar Filter"}
             >
               {isSidebarCollapsed ? (
@@ -488,39 +488,74 @@ export function Dashboard({
             </Button>
 
             {/* Mobile Sheet Trigger */}
-            <div className="lg:hidden">
+            <div className="lg:hidden shrink-0">
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-9 w-9">
-                    <Menu className="w-5 h-5 text-slate-700" />
+                  <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
+                    <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-72 bg-slate-900 border-r-slate-800">
-                  <Sidebar
-                    filterOptions={activeFilterOptions}
-                    filterState={filterState}
-                    onFilterChange={setFilterState}
-                    onResetFilter={handleResetFilter}
-                    availableRegionals={availableRegionals}
-                    availableBranches={availableBranches}
-                    totalCount={records.length}
-                    filteredCount={filteredData.length}
-                  />
+                <SheetContent side="left" className="p-0 w-72 bg-slate-900 border-r-slate-800 flex flex-col h-full">
+                  <div className="flex-1 overflow-hidden">
+                    <Sidebar
+                      filterOptions={activeFilterOptions}
+                      filterState={filterState}
+                      onFilterChange={setFilterState}
+                      onResetFilter={handleResetFilter}
+                      availableRegionals={availableRegionals}
+                      availableBranches={availableBranches}
+                      totalCount={records.length}
+                      filteredCount={filteredData.length}
+                    />
+                  </div>
+                  {/* Mobile User Profile & Actions Footer */}
+                  <div className="p-3 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <span className="text-xs font-semibold text-slate-200 truncate">{userName}</span>
+                      <span className={`text-[10px] font-medium ${isAdmin ? "text-blue-400" : "text-slate-400"}`}>
+                        {isAdmin ? "Admin" : "Viewer"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a
+                        href="/change-password"
+                        title="Ganti Password"
+                        className="h-7 w-7 flex items-center justify-center rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                      </a>
+                      {isAdmin && (
+                        <a
+                          href="/admin/users"
+                          title="Manajemen Pengguna"
+                          className="h-7 w-7 flex items-center justify-center rounded-md border border-slate-700 bg-slate-800 hover:bg-blue-900/50 hover:text-blue-400 text-slate-300 transition-colors"
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                      <button
+                        onClick={logout}
+                        title="Keluar"
+                        className="h-7 w-7 flex items-center justify-center rounded-md border border-slate-700 bg-slate-800 hover:bg-rose-900/50 hover:text-rose-400 text-slate-300 transition-colors"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 </SheetContent>
               </Sheet>
             </div>
 
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-slate-900 border border-slate-700/40 shadow-2xs flex items-center justify-center p-0.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden shrink-0 bg-slate-900 border border-slate-700/40 shadow-2xs flex items-center justify-center p-0.5">
                 <Image src="/logo.png" alt="TDSC Logo" width={32} height={32} className="w-full h-full object-contain" />
               </div>
-              <div>
-                <div className="flex items-center gap-2 min-w-0">
-                  <h1 className="text-sm sm:text-base lg:text-lg font-bold tracking-tight text-slate-800 whitespace-nowrap">
-                    Dashboard LOP Priority 20 Branch
-                  </h1>
-                </div>
-                <p className="text-xs text-slate-500 hidden sm:block">
+              <div className="min-w-0">
+                <h1 className="text-xs sm:text-base lg:text-lg font-bold tracking-tight text-slate-800 truncate">
+                  <span className="hidden sm:inline">Dashboard LOP Priority 20 Branch</span>
+                  <span className="sm:hidden">LOP Priority</span>
+                </h1>
+                <p className="text-xs text-slate-500 hidden sm:block truncate">
                   Monitoring Status Konstruksi, Status Go-Live, & Port Plan vs Realisasi
                 </p>
               </div>
@@ -528,7 +563,7 @@ export function Dashboard({
           </div>
 
           {/* Right Action Bar: Shared Sync & Search */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Shared Snapshot Status Badge */}
             <div className="hidden md:flex items-center">
               <Badge
@@ -546,7 +581,7 @@ export function Dashboard({
               size="sm"
               onClick={() => handleSync()}
               disabled={isSyncing}
-              className="h-8 text-xs font-medium bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-xs flex items-center gap-1.5"
+              className="h-8 px-2 sm:px-3 text-xs font-medium bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-xs flex items-center gap-1.5 shrink-0"
               title="Perbarui snapshot bersama dari Google Sheet"
             >
               <RefreshCw
@@ -568,7 +603,7 @@ export function Dashboard({
                   setSyncSuccess(null);
                   setIsSettingsOpen(true);
                 }}
-                className="h-8 w-8 bg-white border-slate-300 text-slate-600 hover:text-slate-900"
+                className="h-8 w-8 bg-white border-slate-300 text-slate-600 hover:text-slate-900 shrink-0"
                 title="Pengaturan Google Spreadsheet"
               >
                 <Settings className="w-4 h-4" />
@@ -576,27 +611,38 @@ export function Dashboard({
             )}
 
             {/* Search Bar */}
-            <div className="relative w-36 sm:w-60">
-              <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <div className="relative w-28 xs:w-36 sm:w-48 md:w-60">
+              <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 absolute left-2 sm:left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Cari LOP, Branch..."
+                placeholder="Cari LOP..."
                 value={filterState.search}
                 onChange={(e) => setFilterState((prev) => ({ ...prev, search: e.target.value }))}
-                className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-100/80 hover:bg-slate-100 focus:bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                className="w-full pl-7 sm:pl-8 pr-6 sm:pr-7 py-1 text-xs bg-slate-100/80 hover:bg-slate-100 focus:bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
               {filterState.search && (
                 <button
                   onClick={() => setFilterState((prev) => ({ ...prev, search: "" }))}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   <X className="w-3 h-3" />
                 </button>
               )}
             </div>
 
-            {/* User Badge + Actions */}
-            <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-slate-200">
+            {/* Mobile Logout Button */}
+            <div className="flex sm:hidden items-center">
+              <button
+                onClick={logout}
+                title="Keluar"
+                className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors shrink-0"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Desktop User Badge + Actions */}
+            <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-slate-200 shrink-0">
               <div className="flex flex-col items-end leading-none">
                 <span className="text-[11px] font-semibold text-slate-700 max-w-[120px] truncate">{userName}</span>
                 <span className="flex items-center gap-1 mt-0.5">
@@ -639,9 +685,8 @@ export function Dashboard({
             </div>
           </div>
         </header>
-
         {/* Scrollable Dashboard Body */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
           {/* Active Filter Chips */}
           {activeChips.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 p-2.5 bg-white/60 backdrop-blur border border-slate-200/60 rounded-xl shadow-xs">
@@ -680,68 +725,70 @@ export function Dashboard({
 
           {/* Main Tabs Section */}
           <Tabs defaultValue="konstruksi" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <TabsList className="bg-white/80 backdrop-blur border border-slate-200/80 p-1 shadow-xs rounded-xl h-auto flex-wrap">
-                <TabsTrigger
-                  value="konstruksi"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3.5 py-1.5 text-xs font-medium flex items-center gap-2 transition-all"
-                >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  <span>Status Konstruksi</span>
-                </TabsTrigger>
-
-                <TabsTrigger
-                  value="rekap"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3.5 py-1.5 text-xs font-medium flex items-center gap-2 transition-all"
-                >
-                  <TableIcon className="w-3.5 h-3.5" />
-                  <span>Tabel Rekapitulasi</span>
-                </TabsTrigger>
-
-                <TabsTrigger
-                  value="material"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3.5 py-1.5 text-xs font-medium flex items-center gap-2 transition-all"
-                >
-                  <PackageCheck className="w-3.5 h-3.5" />
-                  <span>Kesiapan Material</span>
-                </TabsTrigger>
-
-                <TabsTrigger
-                  value="golive"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3.5 py-1.5 text-xs font-medium flex items-center gap-2 transition-all"
-                >
-                  <Compass className="w-3.5 h-3.5" />
-                  <span>Status Go-Live</span>
-                </TabsTrigger>
-
-                <TabsTrigger
-                  value="port"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3.5 py-1.5 text-xs font-medium flex items-center gap-2 transition-all"
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Port Plan vs Real</span>
-                </TabsTrigger>
-
-                <TabsTrigger
-                  value="detail"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3.5 py-1.5 text-xs font-medium flex items-center gap-2 transition-all"
-                >
-                  <Database className="w-3.5 h-3.5" />
-                  <span>Detail Data</span>
-                </TabsTrigger>
-
-                {isAdmin && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <TabsList className="bg-white/80 backdrop-blur border border-slate-200/80 p-1 shadow-xs rounded-xl h-auto inline-flex flex-nowrap min-w-max">
                   <TabsTrigger
-                    value="backup"
-                    className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-lg px-3.5 py-1.5 text-xs font-medium flex items-center gap-2 transition-all"
+                    value="konstruksi"
+                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 whitespace-nowrap"
                   >
-                    <HardDrive className="w-3.5 h-3.5" />
-                    <span>Backup</span>
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    <span>Status Konstruksi</span>
                   </TabsTrigger>
-                )}
-              </TabsList>
 
-              <div className="text-xs text-slate-500 hidden md:block">
+                  <TabsTrigger
+                    value="rekap"
+                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 whitespace-nowrap"
+                  >
+                    <TableIcon className="w-3.5 h-3.5" />
+                    <span>Tabel Rekapitulasi</span>
+                  </TabsTrigger>
+
+                  <TabsTrigger
+                    value="material"
+                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 whitespace-nowrap"
+                  >
+                    <PackageCheck className="w-3.5 h-3.5" />
+                    <span>Kesiapan Material</span>
+                  </TabsTrigger>
+
+                  <TabsTrigger
+                    value="golive"
+                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 whitespace-nowrap"
+                  >
+                    <Compass className="w-3.5 h-3.5" />
+                    <span>Status Go-Live</span>
+                  </TabsTrigger>
+
+                  <TabsTrigger
+                    value="port"
+                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 whitespace-nowrap"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Port Plan vs Real</span>
+                  </TabsTrigger>
+
+                  <TabsTrigger
+                    value="detail"
+                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 whitespace-nowrap"
+                  >
+                    <Database className="w-3.5 h-3.5" />
+                    <span>Detail Data</span>
+                  </TabsTrigger>
+
+                  {isAdmin && (
+                    <TabsTrigger
+                      value="backup"
+                      className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 whitespace-nowrap"
+                    >
+                      <HardDrive className="w-3.5 h-3.5" />
+                      <span>Backup</span>
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+              </div>
+
+              <div className="text-xs text-slate-500 hidden md:block shrink-0">
                 Menampilkan <strong className="text-slate-700">{filteredData.length}</strong> dari{" "}
                 <strong className="text-slate-700">{records.length}</strong> LOP
               </div>

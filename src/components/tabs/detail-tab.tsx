@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useAuth } from "@/components/auth-provider";
 import {
   Table,
   TableBody,
@@ -109,7 +108,6 @@ function renderCell(record: LopRecord, key: DetailDataColumnKey) {
 }
 
 export function DetailTab({ data }: DetailTabProps) {
-  const { isAdmin } = useAuth();
   const [sortField, setSortField] = useState<keyof LopRecord>("ihldLopId");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(0);
@@ -200,9 +198,9 @@ export function DetailTab({ data }: DetailTabProps) {
   return (
     <div className="space-y-4">
       {/* Table Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/80 backdrop-blur border border-slate-200/80 p-3 rounded-xl">
-        <div className="flex items-center gap-2">
-          <div className="relative w-64">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white/80 backdrop-blur border border-slate-200/80 p-2.5 sm:p-3 rounded-xl">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -215,13 +213,13 @@ export function DetailTab({ data }: DetailTabProps) {
               className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-slate-500 shrink-0">
             {formatNumber(sortedData.length)} baris
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 mr-2">
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span>Baris per halaman:</span>
             <select
               value={pageSize}
@@ -237,17 +235,17 @@ export function DetailTab({ data }: DetailTabProps) {
             </select>
           </div>
 
-          {isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCsv}
-              className="h-8 text-xs bg-white text-slate-700 hover:bg-slate-50 border-slate-300 font-medium flex items-center gap-1.5 shadow-xs"
-            >
-              <Download className="w-3.5 h-3.5 text-blue-600" />
-              <span>Unduh CSV (Filtered)</span>
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={data.length === 0}
+            className="h-8 text-xs bg-white text-slate-700 hover:bg-slate-50 border-slate-300 font-medium flex items-center gap-1.5 shadow-xs"
+          >
+            <Download className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">Unduh CSV</span>
+            <span className="sm:hidden">CSV</span>
+          </Button>
         </div>
       </div>
 
@@ -302,7 +300,7 @@ export function DetailTab({ data }: DetailTabProps) {
 
         {/* Pagination Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between p-3 border-t border-slate-200 bg-white/60 gap-3">
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 text-center sm:text-left">
             Menampilkan{" "}
             <strong>
               {sortedData.length === 0 ? 0 : currentPage * pageSize + 1} -{" "}
