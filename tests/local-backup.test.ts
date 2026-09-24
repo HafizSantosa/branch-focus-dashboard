@@ -129,3 +129,52 @@ test("daily backup writes all snapshot rows, retains newest files, and catches u
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("backup routes restrict access to administrators only", async () => {
+  const { authorizeApi } = await import("../src/lib/server-auth");
+  const { userDb } = await import("../src/lib/db");
+
+  // Unauthenticated
+  const unauth = await authorizeApi("admin", null);
+  assert.equal(unauth.user, null);
+  assert.equal(unauth.response?.status, 401);
+
+  // Create viewer and admin users
+  userDb.create({
+    id: "backup-viewer",
+    username: "backupviewer",
+    email: "viewer@example.com",
+    password: "hash",
+    role: "viewer",
+    email_verified: 1,
+    active: 1,
+  });
+  userDb.create({
+    id: "backup-admin",
+    username: "backupadmin",
+    email: "admin@example.com",
+    password: "hash",
+    role: "admin",
+    email_verified: 1,
+    active: 1,
+  });
+
+  // Viewer session: rejected with 403 Forbidden
+  const viewerSession = {
+    user: { id: "backup-viewer", role: "viewer" as const, authenticated: true },
+    expires: "2099-01-01",
+  };
+  const viewerRes = await authorizeApi("admin", viewerSession);
+  assert.equal(viewerRes.user, null);
+  assert.equal(viewerRes.response?.status, 403);
+
+  // Admin session: authorized successfully
+  const adminSession = {
+    user: { id: "backup-admin", role: "admin" as const, authenticated: true },
+    expires: "2099-01-01",
+  };
+  const adminRes = await authorizeApi("admin", adminSession);
+  assert.equal(adminRes.response, null);
+  assert.equal(adminRes.user?.id, "backup-admin");
+  assert.equal(adminRes.user?.role, "admin");
+});

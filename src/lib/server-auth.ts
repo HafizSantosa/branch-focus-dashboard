@@ -6,7 +6,8 @@ import { userDb, type DbUser, type UserRole } from "@/lib/db";
 export async function getCurrentUser(
   session?: Session | null
 ): Promise<DbUser | null> {
-  const activeSession = session ?? (await getServerSession(authOptions));
+  const activeSession =
+    session !== undefined ? session : await getServerSession(authOptions);
   const id = activeSession?.user?.id;
   if (!id || !activeSession.user.authenticated) return null;
 
@@ -16,8 +17,11 @@ export async function getCurrentUser(
 }
 
 
-export async function authorizeApi(requiredRole?: UserRole) {
-  const user = await getCurrentUser();
+export async function authorizeApi(
+  requiredRole?: UserRole,
+  session?: Session | null
+) {
+  const user = await getCurrentUser(session);
   if (!user) {
     return {
       user: null,

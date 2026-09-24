@@ -13,6 +13,7 @@ import {
   FileText,
   Loader2,
 } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
 
 interface BackupFile {
   fileName: string;
@@ -59,6 +60,7 @@ async function fetchBackupStatus(): Promise<BackupStatusResponse> {
 }
 
 export function BackupTab() {
+  const { isAdmin } = useAuth();
   const [status, setStatus] = useState<BackupStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -66,6 +68,7 @@ export function BackupTab() {
   const [runError, setRunError] = useState<string | null>(null);
 
   const refresh = useCallback((signal?: AbortSignal) => {
+    if (!isAdmin) return;
     fetchBackupStatus()
       .then((s) => {
         if (signal?.aborted) return;
@@ -76,16 +79,16 @@ export function BackupTab() {
         if (signal?.aborted) return;
         setError(err instanceof Error ? err.message : "Gagal memuat status.");
       });
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
+    if (!isAdmin) return;
     const controller = new AbortController();
     refresh(controller.signal);
     return () => controller.abort();
-  }, [refresh]);
-
+  }, [isAdmin, refresh]);
   const handleRunNow = async () => {
-    if (isRunning) return;
+    if (isRunning || !isAdmin) return;
     setIsRunning(true);
     setRunMessage(null);
     setRunError(null);
@@ -108,6 +111,14 @@ export function BackupTab() {
       setIsRunning(false);
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-500">
+        Fitur backup hanya dapat diakses oleh administrator.
+      </div>
+    );
+  }
 
   if (!status) {
     return error ? (
