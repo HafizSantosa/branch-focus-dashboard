@@ -4,85 +4,15 @@ import { useMemo } from "react";
 import { Target, TrendingDown, ClipboardList, Truck, HardHat, Layers, Rocket } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { LopRecord } from "@/types/lop";
-import { formatNumber, formatPercent, sumBy } from "@/lib/utils";
+import { formatNumber, formatPercent } from "@/lib/utils";
+import { buildKpiMetrics } from "@/lib/dashboard-metrics";
 
 interface KpiCardsProps {
   data: LopRecord[];
 }
 
 export function KpiCards({ data }: KpiCardsProps) {
-  const metrics = useMemo(() => {
-    const totalLop = data.length;
-    const totalPortPlan = sumBy(data, (d) => d.portPlan);
-    const totalPortReal = sumBy(data, (d) => d.portReal);
-    const realizationRate = totalPortPlan > 0 ? (totalPortReal / totalPortPlan) * 100 : 0;
-
-    let dropPort = 0;
-    let dropLop = 0;
-    let persiapanPort = 0;
-    let persiapanLop = 0;
-    let matdelPort = 0;
-    let matdelLop = 0;
-    let ogpPort = 0;
-    let ogpLop = 0;
-    let finishPort = 0;
-    let finishLop = 0;
-    let goLivePort = 0;
-    let goLiveLop = 0;
-
-    for (const d of data) {
-      const s = d.statusKonstruksi || "";
-      if (
-        s.startsWith("00.") ||
-        s.startsWith("0.") ||
-        s.toLowerCase().includes("drop") ||
-        s.toLowerCase().includes("kendala")
-      ) {
-        dropPort += d.portPlan;
-        dropLop += 1;
-      } else if (s === "01. Persiapan") {
-        persiapanPort += d.portPlan;
-        persiapanLop += 1;
-      } else if (s === "02. Material Delivery" || s === "02. Matdel") {
-        matdelPort += d.portPlan;
-        matdelLop += 1;
-      } else if (s === "03. OGP Instalasi") {
-        ogpPort += d.portPlan;
-        ogpLop += 1;
-      } else if (s === "04. Finish Instalasi") {
-        finishPort += d.portPlan;
-        finishLop += 1;
-      } else if (s === "05. Go Live") {
-        goLivePort += d.portReal;
-        goLiveLop += 1;
-      }
-    }
-
-    return {
-      totalLop,
-      totalPortPlan,
-      totalPortReal,
-      realizationRate,
-      dropPort,
-      dropLop,
-      dropPct: totalPortPlan > 0 ? (dropPort / totalPortPlan) * 100 : 0,
-      persiapanPort,
-      persiapanLop,
-      persiapanPct: totalPortPlan > 0 ? (persiapanPort / totalPortPlan) * 100 : 0,
-      matdelPort,
-      matdelLop,
-      matdelPct: totalPortPlan > 0 ? (matdelPort / totalPortPlan) * 100 : 0,
-      ogpPort,
-      ogpLop,
-      ogpPct: totalPortPlan > 0 ? (ogpPort / totalPortPlan) * 100 : 0,
-      finishPort,
-      finishLop,
-      finishPct: totalPortPlan > 0 ? (finishPort / totalPortPlan) * 100 : 0,
-      goLivePort,
-      goLiveLop,
-      goLivePct: totalPortPlan > 0 ? (goLivePort / totalPortPlan) * 100 : 0,
-    };
-  }, [data]);
+  const metrics = useMemo(() => buildKpiMetrics(data), [data]);
 
   const cards = [
     {

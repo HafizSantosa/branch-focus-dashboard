@@ -16,6 +16,11 @@ import { Card } from "@/components/ui/card";
 import { LopRecord } from "@/types/lop";
 import { formatNumber, getStatusBadgeVariant } from "@/lib/utils";
 import {
+  buildDetailCsv,
+  DETAIL_DATA_COLUMNS,
+  type DetailDataColumnKey,
+} from "@/lib/detail-data";
+import {
   Download,
   ArrowUpDown,
   ArrowUp,
@@ -34,6 +39,74 @@ interface DetailTabProps {
   data: LopRecord[];
 }
 
+function columnClassName(key: DetailDataColumnKey, header = false): string {
+  const base = header
+    ? "cursor-pointer text-xs font-semibold text-slate-700 group"
+    : "text-xs text-slate-700";
+
+  if (key === "ihldLopId") return `${base} min-w-[110px]`;
+  if (key === "portPlan" || key === "portReal") {
+    return `${base} min-w-[90px] text-right`;
+  }
+  if (key === "statusKonstruksi" || key === "statusMaterial") {
+    return `${base} min-w-[150px]`;
+  }
+  if (key === "groupingKendala") return `${base} min-w-[220px]`;
+  return `${base} min-w-[110px]`;
+}
+
+function renderCell(record: LopRecord, key: DetailDataColumnKey) {
+  if (key === "ihldLopId") {
+    return (
+      <span className="font-mono font-semibold text-blue-700">
+        {record.ihldLopId}
+      </span>
+    );
+  }
+  if (key === "portPlan" || key === "portReal") {
+    return (
+      <span
+        className={`font-mono font-medium ${
+          key === "portReal" ? "text-emerald-700" : "text-slate-700"
+        }`}
+      >
+        {formatNumber(record[key])}
+      </span>
+    );
+  }
+  if (key === "pt") {
+    return (
+      <Badge
+        variant="outline"
+        className={
+          record.pt === "PT3"
+            ? "bg-purple-50 text-purple-700 border-purple-200"
+            : "bg-blue-50 text-blue-700 border-blue-200"
+        }
+      >
+        {record.pt || "-"}
+      </Badge>
+    );
+  }
+  if (key === "statusKonstruksi") {
+    return (
+      <Badge
+        variant="outline"
+        className={getStatusBadgeVariant(record.statusKonstruksi)}
+      >
+        {record.statusKonstruksi || "-"}
+      </Badge>
+    );
+  }
+
+  const value = record[key];
+  return (
+    <span className="whitespace-nowrap" title={String(value || "")}>
+      {value || "-"}
+    </span>
+  );
+}
+
 export function DetailTab({ data }: DetailTabProps) {
   const [sortField, setSortField] = useState<keyof LopRecord>("ihldLopId");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -46,13 +119,12 @@ export function DetailTab({ data }: DetailTabProps) {
   const tableFilteredData = useMemo(() => {
     if (!tableSearch.trim()) return data;
     const q = tableSearch.toLowerCase();
-    return data.filter(
-      (r) =>
-        r.ihldLopId.toLowerCase().includes(q) ||
-        r.namaProyek.toLowerCase().includes(q) ||
-        r.branch.toLowerCase().includes(q) ||
-        r.mitra.toLowerCase().includes(q) ||
-        r.groupingKendala.toLowerCase().includes(q)
+    return data.filter((record) =>
+      DETAIL_DATA_COLUMNS.some((column) =>
+        String(record[column.key] ?? "")
+          .toLowerCase()
+          .includes(q)
+      )
     );
   }, [data, tableSearch]);
 
@@ -62,7 +134,10 @@ export function DetailTab({ data }: DetailTabProps) {
       const valA = a[sortField];
       const valB = b[sortField];
 
-      if (valA === null || valA === undefined) return sortDir === "asc" ? 1 : -1;
+      if (valA === null || valA === undefined) {
+        if (valB === null || valB === undefined) return 0;
+        return sortDir === "asc" ? 1 : -1;
+      }
       if (valB === null || valB === undefined) return sortDir === "asc" ? -1 : 1;
 
       if (typeof valA === "number" && typeof valB === "number") {
@@ -92,71 +167,24 @@ export function DetailTab({ data }: DetailTabProps) {
     }
   };
 
-  // CSV Export with UTF-8 BOM
+  // CSV export uses the same ordered column contract as the visible table.
   const handleExportCsv = () => {
-    if (data.length === 0) return;
+    if (sortedData.length === 0) return;
 
-    const headers = [
-      "iHLD LoP ID",
-      "Nama Proyek",
-      "Area",
-      "Regional",
-      "Branch",
-      "PT",
-      "Mitra",
-      "Prioritas Branch",
-      "Cek WO",
-      "Program Flag",
-      "Status Konstruksi",
-      "Status Material",
-      "Status GD TA",
-      "Status GL",
-      "Plan GL",
-      "Plan GL xl",
-      "Port Plan",
-      "Port Real",
-      "Grouping Kendala",
-      "Keterangan",
-    ];
-
-    const escapeCsv = (str: string | number | null | undefined) => {
-      if (str === null || str === undefined) return '""';
-      const val = String(str).replace(/"/g, '""');
-      return `"${val}"`;
-    };
-
-    const rows = data.map((r) => [
-      escapeCsv(r.ihldLopId),
-      escapeCsv(r.namaProyek),
-      escapeCsv(r.area),
-      escapeCsv(r.regional),
-      escapeCsv(r.branch),
-      escapeCsv(r.pt),
-      escapeCsv(r.mitra),
-      escapeCsv(r.prioritasPerBranch),
-      escapeCsv(r.cekWo),
-      escapeCsv(r.prioFlag),
-      escapeCsv(r.statusKonstruksi),
-      escapeCsv(r.statusMaterial),
-      escapeCsv(r.statusGdTa),
-      escapeCsv(r.statusGL),
-      escapeCsv(r.planGL),
-      escapeCsv(r.planGLxl),
-      r.portPlan,
-      r.portReal,
-      escapeCsv(r.groupingKendala),
-      escapeCsv(r.keterangan),
-    ]);
-
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((row) => row.join(","))].join("\r\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([buildDetailCsv(sortedData)], {
+      type: "text/csv;charset=utf-8;",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `LOP_Priority_Filtered_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute(
+      "download",
+      `LOP_Priority_Filtered_${new Date().toISOString().slice(0, 10)}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const renderSortIcon = (field: keyof LopRecord) => {
@@ -173,9 +201,9 @@ export function DetailTab({ data }: DetailTabProps) {
   return (
     <div className="space-y-4">
       {/* Table Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/80 backdrop-blur border border-slate-200/80 p-3 rounded-xl">
-        <div className="flex items-center gap-2">
-          <div className="relative w-64">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white/80 backdrop-blur border border-slate-200/80 p-2.5 sm:p-3 rounded-xl">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -188,13 +216,13 @@ export function DetailTab({ data }: DetailTabProps) {
               className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-slate-500 shrink-0">
             {formatNumber(sortedData.length)} baris
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 mr-2">
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span>Baris per halaman:</span>
             <select
               value={pageSize}
@@ -214,10 +242,12 @@ export function DetailTab({ data }: DetailTabProps) {
             variant="outline"
             size="sm"
             onClick={handleExportCsv}
+            disabled={data.length === 0}
             className="h-8 text-xs bg-white text-slate-700 hover:bg-slate-50 border-slate-300 font-medium flex items-center gap-1.5 shadow-xs"
           >
             <Download className="w-3.5 h-3.5 text-blue-600" />
-            <span>Unduh CSV (Filtered)</span>
+            <span className="hidden sm:inline">Unduh CSV</span>
+            <span className="sm:hidden">CSV</span>
           </Button>
         </div>
       </div>
@@ -228,72 +258,24 @@ export function DetailTab({ data }: DetailTabProps) {
           <Table>
             <TableHeader className="bg-slate-50/80 border-b border-slate-200">
               <TableRow className="hover:bg-transparent">
-                <TableHead
-                  onClick={() => handleSort("ihldLopId")}
-                  className="cursor-pointer text-xs font-semibold text-slate-700 group w-[110px]"
-                >
-                  iHLD LoP ID {renderSortIcon("ihldLopId")}
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("namaProyek")}
-                  className="cursor-pointer text-xs font-semibold text-slate-700 group min-w-[220px]"
-                >
-                  Nama Proyek {renderSortIcon("namaProyek")}
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("branch")}
-                  className="cursor-pointer text-xs font-semibold text-slate-700 group"
-                >
-                  Branch {renderSortIcon("branch")}
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("area")}
-                  className="cursor-pointer text-xs font-semibold text-slate-700 group"
-                >
-                  Area {renderSortIcon("area")}
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("pt")}
-                  className="cursor-pointer text-xs font-semibold text-slate-700 group w-[60px]"
-                >
-                  PT {renderSortIcon("pt")}
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("statusKonstruksi")}
-                  className="cursor-pointer text-xs font-semibold text-slate-700 group min-w-[150px]"
-                >
-                  Status Konstruksi {renderSortIcon("statusKonstruksi")}
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("statusGL")}
-                  className="cursor-pointer text-xs font-semibold text-slate-700 group min-w-[130px]"
-                >
-                  Status GL {renderSortIcon("statusGL")}
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("portPlan")}
-                  className="cursor-pointer text-xs font-semibold text-slate-700 text-right group w-[90px]"
-                >
-                  Port Plan {renderSortIcon("portPlan")}
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("portReal")}
-                  className="cursor-pointer text-xs font-semibold text-slate-700 text-right group w-[90px]"
-                >
-                  Port Real {renderSortIcon("portReal")}
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("planGL")}
-                  className="cursor-pointer text-xs font-semibold text-slate-700 group w-[100px]"
-                >
-                  Plan GL {renderSortIcon("planGL")}
-                </TableHead>
+                {DETAIL_DATA_COLUMNS.map((column) => (
+                  <TableHead
+                    key={column.key}
+                    onClick={() => handleSort(column.key)}
+                    className={columnClassName(column.key, true)}
+                  >
+                    {column.label} {renderSortIcon(column.key)}
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {pagedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-10 text-slate-500 text-xs">
+                  <TableCell
+                    colSpan={DETAIL_DATA_COLUMNS.length}
+                    className="text-center py-10 text-slate-500 text-xs"
+                  >
                     Tidak ada data yang sesuai dengan filter atau pencarian.
                   </TableCell>
                 </TableRow>
@@ -304,53 +286,14 @@ export function DetailTab({ data }: DetailTabProps) {
                     onClick={() => setSelectedRecord(row)}
                     className="cursor-pointer hover:bg-blue-50/50 transition-colors text-xs border-b border-slate-100"
                   >
-                    <TableCell className="font-mono font-semibold text-blue-700">
-                      {row.ihldLopId}
-                    </TableCell>
-                    <TableCell className="font-medium text-slate-800 max-w-xs truncate" title={row.namaProyek}>
-                      {row.namaProyek}
-                    </TableCell>
-                    <TableCell className="text-slate-700 whitespace-nowrap">
-                      {row.branch}
-                    </TableCell>
-                    <TableCell className="text-slate-600 whitespace-nowrap">
-                      {row.area}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          row.pt === "PT3"
-                            ? "bg-purple-50 text-purple-700 border-purple-200"
-                            : "bg-blue-50 text-blue-700 border-blue-200"
-                        }
+                    {DETAIL_DATA_COLUMNS.map((column) => (
+                      <TableCell
+                        key={column.key}
+                        className={columnClassName(column.key)}
                       >
-                        {row.pt}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getStatusBadgeVariant(row.statusKonstruksi)}>
-                        {row.statusKonstruksi}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {row.statusGL ? (
-                        <Badge variant="outline" className={getStatusBadgeVariant(row.statusGL)}>
-                          {row.statusGL}
-                        </Badge>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-medium text-slate-700">
-                      {formatNumber(row.portPlan)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-medium text-emerald-700">
-                      {formatNumber(row.portReal)}
-                    </TableCell>
-                    <TableCell className="text-slate-600 whitespace-nowrap font-mono text-[11px]">
-                      {row.planGL || "-"}
-                    </TableCell>
+                        {renderCell(row, column.key)}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 ))
               )}
@@ -360,7 +303,7 @@ export function DetailTab({ data }: DetailTabProps) {
 
         {/* Pagination Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between p-3 border-t border-slate-200 bg-white/60 gap-3">
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 text-center sm:text-left">
             Menampilkan{" "}
             <strong>
               {sortedData.length === 0 ? 0 : currentPage * pageSize + 1} -{" "}

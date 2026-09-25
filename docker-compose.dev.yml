@@ -1,0 +1,22 @@
+# Development only — hot reload with volume mounts.
+# Usage: docker compose -f docker-compose.dev.yml up
+services:
+  app:
+    container_name: lop-priority-dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${PORT:-3001}:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    env_file:
+      - path: .env.local
+        required: false
+      - path: .env
+        required: false
+    environment:
+      - WATCHPACK_POLLING=true
+      - DB_PATH=/app/data/users.db

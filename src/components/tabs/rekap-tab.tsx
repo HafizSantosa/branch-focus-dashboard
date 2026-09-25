@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LopRecord } from "@/types/lop";
@@ -73,19 +74,26 @@ function getAchStyle(ach: number): string {
 }
 
 export function RekapTab({ data }: RekapTabProps) {
+  const { isAdmin } = useAuth();
   const [viewMode, setViewMode] = useState<"detail" | "compact">("detail");
 
   // Calculate full matrix grouping by Area and Branch
   const { areaGroups, grandTotal, kpis } = useMemo(() => {
     // Collect all branches present in data + defaults
     const branchRowsMap = new Map<string, LopRecord[]>();
-    for (const r of data) {
-      if (!r.branch) continue;
-      const bUpper = r.branch.toUpperCase().trim();
-      if (!branchRowsMap.has(bUpper)) {
-        branchRowsMap.set(bUpper, []);
+    const observedBranchesByArea = new Map<string, Set<string>>();
+    for (const record of data) {
+      if (!record.branch) continue;
+      const branch = record.branch.toUpperCase().trim();
+      if (!branchRowsMap.has(branch)) {
+        branchRowsMap.set(branch, []);
       }
-      branchRowsMap.get(bUpper)!.push(r);
+      branchRowsMap.get(branch)!.push(record);
+
+      if (!observedBranchesByArea.has(record.area)) {
+        observedBranchesByArea.set(record.area, new Set());
+      }
+      observedBranchesByArea.get(record.area)!.add(branch);
     }
 
     const calculateBranchRekap = (areaName: string, branchName: string): BranchRekap => {
@@ -168,7 +176,13 @@ export function RekapTab({ data }: RekapTabProps) {
     let gtTotal = emptySplit();
 
     for (const area of areaNames) {
-      const definedBranches = DEFAULT_BRANCH_BY_AREA[area] || [];
+      const defaultBranches = DEFAULT_BRANCH_BY_AREA[area] || [];
+      const additionalBranches = Array.from(
+        observedBranchesByArea.get(area) ?? []
+      )
+        .filter((branch) => !defaultBranches.includes(branch))
+        .sort();
+      const definedBranches = [...defaultBranches, ...additionalBranches];
       const branchRekaps: BranchRekap[] = [];
 
       let stDropDbp = emptySplit();
@@ -440,16 +454,18 @@ export function RekapTab({ data }: RekapTabProps) {
             </button>
           </div>
 
-          {/* Export Matrix Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportMatrixCsv}
-            className="h-8 text-xs font-medium bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-xs flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5 text-blue-600" />
-            <span>Unduh Tabel Rekapitulasi CSV</span>
-          </Button>
+          {/* Export Matrix Button — Admin only */}
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportMatrixCsv}
+              className="h-8 text-xs font-medium bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-xs flex items-center gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-600" />
+              <span>Unduh Tabel Rekapitulasi CSV</span>
+            </Button>
+          )}
         </div>
       </div>
 

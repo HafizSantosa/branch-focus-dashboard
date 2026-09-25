@@ -1,11 +1,39 @@
 services:
   app:
-    build: .
+    image: ${APP_IMAGE:-lop-priority:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    init: true
     ports:
-      - "3000:3000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3001}:3000"
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: true
     volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
+      - app-data:/app/data
     environment:
-      - WATCHPACK_POLLING=true
+      NODE_ENV: production
+      PORT: 3000
+      NEXTAUTH_URL: "${NEXTAUTH_URL:?NEXTAUTH_URL must be set in .env}"
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?NEXTAUTH_SECRET must be set in .env}"
+      DB_PATH: /app/data/users.db
+      TRUST_PROXY: "${TRUST_PROXY:-true}"
+      ALLOW_PUBLIC_REGISTRATION: "${ALLOW_PUBLIC_REGISTRATION:-false}"
+      DATA_SYNC_INTERVAL_SECONDS: "${DATA_SYNC_INTERVAL_SECONDS:-300}"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  app-data:

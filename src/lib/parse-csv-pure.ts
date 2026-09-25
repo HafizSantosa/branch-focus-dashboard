@@ -189,6 +189,39 @@ function cleanString(val: string | undefined): string {
   return trimmed;
 }
 
+const INDONESIAN_MONTH_ORDER = [
+  "januari",
+  "februari",
+  "maret",
+  "april",
+  "mei",
+  "juni",
+  "juli",
+  "agustus",
+  "september",
+  "oktober",
+  "november",
+  "desember",
+] as const;
+
+function comparePriorityFlags(a: string, b: string): number {
+  const normalizedA = a.toLocaleLowerCase("id");
+  const normalizedB = b.toLocaleLowerCase("id");
+  const monthA = INDONESIAN_MONTH_ORDER.findIndex((month) =>
+    normalizedA.includes(month)
+  );
+  const monthB = INDONESIAN_MONTH_ORDER.findIndex((month) =>
+    normalizedB.includes(month)
+  );
+
+  if (monthA !== -1 && monthB !== -1 && monthA !== monthB) {
+    return monthA - monthB;
+  }
+  if (monthA !== -1 && monthB === -1) return -1;
+  if (monthA === -1 && monthB !== -1) return 1;
+  return a.localeCompare(b, "id");
+}
+
 export function parseCsvString(csvContent: string): {
   records: LopRecord[];
   filterOptions: FilterOptions;
@@ -224,6 +257,29 @@ export function parseCsvString(csvContent: string): {
     }
   }
 
+  const headers = rows[headerIndex].map((value) =>
+    (value || "").trim().toLowerCase().replace(/\s+/g, " ")
+  );
+  const requiredColumns: Array<[number, string, (header: string) => boolean]> = [
+    [0, "iHLD LoP ID", (header) => header.includes("ihld") || header.includes("lop id")],
+    [2, "Port Plan", (header) => header === "port plan"],
+    [3, "Port Real", (header) => header === "port real"],
+    [8, "Branch", (header) => header.includes("branch")],
+    [9, "PT", (header) => header === "pt"],
+    [20, "Status Konstruksi", (header) => header.startsWith("status kon")],
+    [21, "Status Material", (header) => header === "status material"],
+    [25, "Plan GL", (header) => header === "plan gl"],
+    [30, "Status GL", (header) => header === "status gl"],
+  ];
+  const invalidColumn = requiredColumns.find(
+    ([index, , matches]) => !matches(headers[index] || "")
+  );
+  if (invalidColumn) {
+    throw new Error(
+      `Format CSV berubah: kolom ${invalidColumn[0] + 1} harus berisi "${invalidColumn[1]}".`
+    );
+  }
+
   const records: LopRecord[] = [];
   const prioFlags = new Set<string>();
   const pts = new Set<string>();
@@ -236,7 +292,7 @@ export function parseCsvString(csvContent: string): {
   const startRow = headerIndex + 1;
   for (let i = startRow; i < rows.length; i++) {
     const row = rows[i];
-    if (!row || row.length < 9) continue;
+    if (!row || row.length < 32) continue;
 
     const rawId = cleanString(row[0]);
     if (!rawId || rawId.toLowerCase().includes("ihld")) continue;
@@ -318,7 +374,7 @@ export function parseCsvString(csvContent: string): {
   });
 
   const filterOptions: FilterOptions = {
-    prioFlag: Array.from(prioFlags).sort(),
+    prioFlag: Array.from(prioFlags).sort(comparePriorityFlags),
     pt: Array.from(pts).sort(),
     mitra: Array.from(mitras).sort(),
     area: Array.from(areas).sort(),
