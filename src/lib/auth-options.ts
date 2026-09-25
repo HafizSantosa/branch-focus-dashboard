@@ -6,8 +6,8 @@ import { rateLimitDb, userDb, type UserRole } from "@/lib/db";
 
 interface AppUserToken extends User {
   role: UserRole;
+  sessionVersion: number;
 }
-
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -50,6 +50,7 @@ export const authOptions: NextAuthOptions = {
           name: user.username,
           email: user.email,
           role: user.role,
+          sessionVersion: user.session_version,
         };
       },
     }),
@@ -61,6 +62,7 @@ export const authOptions: NextAuthOptions = {
         const appUser = user as AppUserToken;
         token.sub = appUser.id;
         token.role = appUser.role;
+        token.sessionVersion = appUser.sessionVersion;
       }
 
       if (!token.sub) {
@@ -70,7 +72,9 @@ export const authOptions: NextAuthOptions = {
 
       const currentUser = userDb.findById(token.sub);
       const authenticated = Boolean(
-        currentUser?.active && currentUser.email_verified
+        currentUser?.active &&
+          currentUser.email_verified &&
+          (token.sessionVersion ?? 0) === currentUser.session_version
       );
       token.authenticated = authenticated;
       if (authenticated && currentUser) {
@@ -88,6 +92,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub ?? "";
         session.user.role = token.role === "admin" ? "admin" : "viewer";
         session.user.authenticated = token.authenticated === true;
+        session.user.sessionVersion = token.sessionVersion ?? 0;
       }
       return session;
     },

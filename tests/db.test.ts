@@ -156,3 +156,66 @@ test("persists user company affiliation", () => {
   const user = database.userDb.findById("company-user");
   assert.equal(user?.company, "PT Telkom Akses");
 });
+
+test("password reset links are restricted, replaceable, expiring, and single-use", () => {
+  database.userDb.create({
+    id: "reset-user",
+    username: "resetuser",
+    email: "reset@example.com",
+    password: "old-hash",
+    role: "viewer",
+    email_verified: 1,
+  });
+  database.userDb.create({
+    id: "inactive-reset-user",
+    username: "inactivereset",
+    email: "inactive-reset@example.com",
+    password: "old-hash",
+    role: "viewer",
+    email_verified: 1,
+  });
+  database.userDb.create({
+    id: "unverified-reset-user",
+    username: "unverifiedreset",
+    email: "unverified-reset@example.com",
+    password: "old-hash",
+    role: "viewer",
+  });
+
+  assert.equal(database.userDb.findById("reset-user")?.session_version, 0);
+  assert.equal(database.userDb.issuePasswordReset("inactive-reset-user", "disabled-hash", 2_000), true);
+  assert.equal(database.userDb.updateActive("inactive-reset-user", 0), true);
+  assert.equal(database.userDb.issuePasswordReset("inactive-reset-user", "inactive", 2_000), false);
+  assert.equal(database.userDb.consumePasswordReset("disabled-hash", "disabled-password", 2_000), false);
+  assert.equal(database.userDb.findById("inactive-reset-user")?.password, "old-hash");
+  assert.equal(database.userDb.findById("inactive-reset-user")?.session_version, 0);
+  assert.equal(database.userDb.issuePasswordReset("unverified-reset-user", "unverified", 2_000), false);
+  assert.equal(database.userDb.issuePasswordReset("reset-user", "first-hash", 2_000), true);
+  assert.equal(database.userDb.hasValidPasswordReset("first-hash", 2_000), true);
+  assert.equal(database.userDb.hasValidPasswordReset("first-hash", 2_001), false);
+  assert.equal(database.userDb.issuePasswordReset("reset-user", "replacement-hash", 2_100), true);
+  assert.equal(database.userDb.hasValidPasswordReset("first-hash", 2_000), false);
+  assert.equal(database.userDb.hasValidPasswordReset("replacement-hash", 2_100), true);
+
+  assert.equal(database.userDb.consumePasswordReset("wrong-hash", "wrong-password", 2_000), false);
+  assert.equal(database.userDb.findById("reset-user")?.password, "old-hash");
+  assert.equal(database.userDb.consumePasswordReset("replacement-hash", "new-hash", 2_100), true);
+  assert.equal(database.userDb.consumePasswordReset("replacement-hash", "replay-hash", 2_100), false);
+  const resetUser = database.userDb.findById("reset-user");
+  assert.equal(resetUser?.password, "new-hash");
+  assert.equal(resetUser?.session_version, 1);
+  assert.equal(resetUser?.password_reset_token_hash, null);
+  assert.equal(resetUser?.password_reset_expires, null);
+
+  database.userDb.issuePasswordReset("reset-user", "clear-hash", 3_000);
+  database.userDb.clearPasswordReset("reset-user", "not-current-hash");
+  assert.equal(database.userDb.hasValidPasswordReset("clear-hash", 2_000), true);
+  database.userDb.clearPasswordReset("reset-user", "clear-hash");
+  assert.equal(database.userDb.hasValidPasswordReset("clear-hash", 2_000), false);
+
+  assert.equal(database.userDb.updatePassword("reset-user", "changed-hash"), true);
+  const changedUser = database.userDb.findById("reset-user");
+  assert.equal(changedUser?.session_version, 2);
+  assert.equal(changedUser?.password_reset_token_hash, null);
+  assert.equal(changedUser?.password_reset_expires, null);
+});

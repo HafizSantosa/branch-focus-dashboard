@@ -40,6 +40,9 @@ function initSchema(db: Database.Database): void {
                              CHECK (active IN (0, 1)),
       verification_token   TEXT,
       verification_expires INTEGER,
+      password_reset_token_hash TEXT,
+      password_reset_expires INTEGER,
+      session_version      INTEGER NOT NULL DEFAULT 0,
       created_at           INTEGER NOT NULL DEFAULT (unixepoch()),
       updated_at           INTEGER NOT NULL DEFAULT (unixepoch())
     );
@@ -79,9 +82,22 @@ function initSchema(db: Database.Database): void {
   `);
 
   const userCols = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
-  if (!userCols.some((col) => col.name === "company")) {
-    db.exec("ALTER TABLE users ADD COLUMN company TEXT;");
+  const columns = new Set(userCols.map((col) => col.name));
+  if (!columns.has("company")) db.exec("ALTER TABLE users ADD COLUMN company TEXT;");
+  if (!columns.has("password_reset_token_hash")) {
+    db.exec("ALTER TABLE users ADD COLUMN password_reset_token_hash TEXT;");
   }
+  if (!columns.has("password_reset_expires")) {
+    db.exec("ALTER TABLE users ADD COLUMN password_reset_expires INTEGER;");
+  }
+  if (!columns.has("session_version")) {
+    db.exec("ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0;");
+  }
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS users_password_reset_token_hash
+      ON users(password_reset_token_hash)
+      WHERE password_reset_token_hash IS NOT NULL;
+  `);
 }
 
 
@@ -98,6 +114,9 @@ export interface DbUser {
   active: 0 | 1;
   verification_token: string | null;
   verification_expires: number | null;
+  password_reset_token_hash: string | null;
+  password_reset_expires: number | null;
+  session_version: number;
   created_at: number;
   updated_at: number;
 }
@@ -214,8 +233,70 @@ export const userDb = {
 
   updatePassword(id: string, passwordHash: string): boolean {
     const result = getDb()
-      .prepare("UPDATE users SET password = ?, updated_at = unixepoch() WHERE id = ?")
+      .prepare(`
+        UPDATE users
+        SET password = ?, password_reset_token_hash = NULL,
+            password_reset_expires = NULL, session_version = session_version + 1,
+            updated_at = unixepoch()
+        WHERE id = ?
+      `)
       .run(passwordHash, id);
+    return result.changes === 1;
+  },
+
+  issuePasswordReset(id: string, tokenHash: string, expires: number): boolean {
+    const result = getDb()
+      .prepare(`
+        UPDATE users
+        SET password_reset_token_hash = ?, password_reset_expires = ?,
+            updated_at = unixepoch()
+        WHERE id = ? AND active = 1 AND email_verified = 1
+      `)
+      .run(tokenHash, expires, id);
+    return result.changes === 1;
+  },
+
+  clearPasswordReset(id: string, tokenHash: string): void {
+    getDb()
+      .prepare(`
+        UPDATE users
+        SET password_reset_token_hash = NULL, password_reset_expires = NULL,
+            updated_at = unixepoch()
+        WHERE id = ? AND password_reset_token_hash = ?
+      `)
+      .run(id, tokenHash);
+  },
+
+  hasValidPasswordReset(
+    tokenHash: string,
+    now = Math.floor(Date.now() / 1000)
+  ): boolean {
+    return Boolean(
+      getDb()
+        .prepare(`
+          SELECT 1 FROM users
+          WHERE password_reset_token_hash = ? AND password_reset_expires >= ?
+            AND active = 1 AND email_verified = 1
+        `)
+        .get(tokenHash, now)
+    );
+  },
+
+  consumePasswordReset(
+    tokenHash: string,
+    passwordHash: string,
+    now = Math.floor(Date.now() / 1000)
+  ): boolean {
+    const result = getDb()
+      .prepare(`
+        UPDATE users
+        SET password = ?, password_reset_token_hash = NULL,
+            password_reset_expires = NULL, session_version = session_version + 1,
+            updated_at = unixepoch()
+        WHERE password_reset_token_hash = ? AND password_reset_expires >= ?
+          AND active = 1 AND email_verified = 1
+      `)
+      .run(passwordHash, tokenHash, now);
     return result.changes === 1;
   },
 

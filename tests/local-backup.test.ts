@@ -161,7 +161,12 @@ test("backup routes restrict access to administrators only", async () => {
 
   // Viewer session: rejected with 403 Forbidden
   const viewerSession = {
-    user: { id: "backup-viewer", role: "viewer" as const, authenticated: true },
+    user: {
+      id: "backup-viewer",
+      role: "viewer" as const,
+      authenticated: true,
+      sessionVersion: 0,
+    },
     expires: "2099-01-01",
   };
   const viewerRes = await authorizeApi("admin", viewerSession);
@@ -170,7 +175,12 @@ test("backup routes restrict access to administrators only", async () => {
 
   // Admin session: authorized successfully
   const adminSession = {
-    user: { id: "backup-admin", role: "admin" as const, authenticated: true },
+    user: {
+      id: "backup-admin",
+      role: "admin" as const,
+      authenticated: true,
+      sessionVersion: 0,
+    },
     expires: "2099-01-01",
   };
   const adminRes = await authorizeApi("admin", adminSession);

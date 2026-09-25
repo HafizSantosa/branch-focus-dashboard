@@ -9,7 +9,7 @@ Executive dashboard for monitoring infrastructure rollout, construction stages, 
 - **Roles:** `admin` manages users, the global spreadsheet source, and local backups; `viewer` has read-only analytical access and can download filtered Detail Data CSVs.
 - **Database:** SQLite through `better-sqlite3`, using WAL mode under `data/users.db`.
 - **Dashboard data:** one server-owned SQLite snapshot is shared by every user, refreshed from a validated `docs.google.com` source on a configurable schedule. Open dashboards check for the latest snapshot every 30 seconds.
-- **Email:** Nodemailer SMTP for account verification. Ethereal is used only in development when SMTP is absent.
+- **Email:** Nodemailer SMTP for account verification and one-hour password-recovery links. Ethereal is used only in development when SMTP is absent.
 - **Deployment:** standalone Node.js container, non-root UID 1001, read-only root filesystem, dropped Linux capabilities, health checks, and bounded JSON logs.
 - **Daily CSV backup:** unfiltered Detail Data exports to the persistent VPS Docker volume with restart catch-up, one-file-per-day protection, and administrator-visible status.
 
@@ -181,6 +181,8 @@ it is no longer needed. This cleanup does not affect `/app/data/backups/`.
 - Admin APIs resolve the current database role instead of trusting a stale client role.
 - Disabled or unverified accounts are rejected on the next session check.
 - Verification tokens are single-use, expire after 24 hours, and are removed after success or expiry.
+- Password-reset links are single-use, apply only to active verified accounts, and invalidate earlier sessions; authenticated password changes do the same.
+- Forgot-password responses do not disclose whether an email belongs to an account.
 - Registration is throttled in SQLite by account identity and, behind a trusted proxy, client IP.
 - Spreadsheet synchronization is server-side and restricted to HTTPS `docs.google.com` URLs. The last successful SQLite snapshot remains available if Google Sheets is temporarily unreachable.
 - Security headers include clickjacking protection, MIME sniffing protection, HSTS, a restrictive permissions policy, and same-origin opener isolation.
