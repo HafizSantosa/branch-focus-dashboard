@@ -9,6 +9,7 @@ Executive dashboard for monitoring infrastructure rollout, construction stages, 
 - **Roles:** `admin` manages users, the global spreadsheet source, and local backups; `viewer` has read-only analytical access and can download filtered Detail Data CSVs.
 - **Database:** SQLite through `better-sqlite3`, using WAL mode under `data/users.db`.
 - **Dashboard data:** one server-owned SQLite snapshot is shared by every user, refreshed from a validated `docs.google.com` source on a configurable schedule. Open dashboards check for the latest snapshot every 30 seconds.
+- **Finish Instalasi chart:** the Construction tab groups exact `04. Finish Instalasi` records by the spreadsheet's `Status FI NY Golive` column, including blank values as `Status Belum Diisi`; Port/LOP totals and global dashboard filters apply, with categories beyond the top seven combined.
 - **Email:** Nodemailer SMTP for account verification and one-hour password-recovery links. Ethereal is used only in development when SMTP is absent.
 - **Deployment:** standalone Node.js container, non-root UID 1001, read-only root filesystem, dropped Linux capabilities, health checks, and bounded JSON logs.
 - **Daily CSV backup:** unfiltered Detail Data exports to the persistent VPS Docker volume with restart catch-up, one-file-per-day protection, and administrator-visible status.

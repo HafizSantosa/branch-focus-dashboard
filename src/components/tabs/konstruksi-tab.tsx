@@ -17,7 +17,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LopRecord } from "@/types/lop";
 import { formatNumber, formatPercent } from "@/lib/utils";
-import { buildConstructionPipeline } from "@/lib/dashboard-metrics";
+import {
+  buildConstructionPipeline,
+  buildFinishStatusDistribution,
+} from "@/lib/dashboard-metrics";
 
 interface KonstruksiTabProps {
   data: LopRecord[];
@@ -43,6 +46,133 @@ const PIE_COLORS = [
   "#f97316",
   "#64748b",
 ];
+
+interface DistributionDonutItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface DistributionDonutCardProps {
+  title: string;
+  description: string;
+  summary: string;
+  unitLabel: string;
+  distribution: { items: DistributionDonutItem[]; total: number };
+  emptyMessage?: string;
+  className?: string;
+}
+
+function DistributionDonutCard({
+  title,
+  description,
+  summary,
+  unitLabel,
+  distribution,
+  emptyMessage,
+  className,
+}: DistributionDonutCardProps) {
+  const showEmptyMessage = emptyMessage && distribution.total === 0;
+
+  return (
+    <Card className={`glass-card ${className || ""}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-bold text-slate-800 flex items-center justify-between">
+          <span>{title}</span>
+          <span className="text-xs font-normal text-slate-500">{summary}</span>
+        </CardTitle>
+        <CardDescription className="text-xs text-slate-500">{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-2">
+        {showEmptyMessage ? (
+          <div className="h-[420px] w-full flex items-center justify-center text-sm text-slate-500">
+            {emptyMessage}
+          </div>
+        ) : (
+          <div className="h-[420px] w-full flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="h-[280px] w-full md:w-1/2 relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const item = payload[0].payload as DistributionDonutItem;
+                        const pct =
+                          distribution.total > 0
+                            ? (item.value / distribution.total) * 100
+                            : 0;
+                        return (
+                          <div className="bg-slate-900 text-white text-xs rounded-lg p-2.5 shadow-xl border border-slate-700 max-w-xs">
+                            <p className="font-semibold text-slate-200">{item.name}</p>
+                            <p className="text-blue-400 font-bold mt-1 text-sm">
+                              {formatNumber(item.value)} {unitLabel} ({formatPercent(pct)})
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Pie
+                    data={distribution.items}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={65}
+                    outerRadius={105}
+                    paddingAngle={2}
+                    isAnimationActive={false}
+                  >
+                    {distribution.items.map((item, index) => (
+                      <Cell key={`cell-${index}`} fill={item.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-xl font-bold text-slate-800">
+                  {formatNumber(distribution.total)}
+                </span>
+                <span className="text-[11px] text-slate-500">Total {unitLabel}</span>
+              </div>
+            </div>
+            <div className="w-full md:w-1/2 space-y-2 max-h-[380px] overflow-y-auto pr-2">
+              {distribution.items.map((item, index) => {
+                const pct =
+                  distribution.total > 0
+                    ? (item.value / distribution.total) * 100
+                    : 0;
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50/80 border border-slate-100 hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 truncate mr-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="font-medium text-slate-700 truncate" title={item.name}>
+                        {item.name}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="font-bold text-slate-900">
+                        {formatNumber(item.value)}
+                      </span>
+                      <span className="text-[11px] text-slate-500 ml-1">
+                        ({formatPercent(pct)})
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export function KonstruksiTab({ data }: KonstruksiTabProps) {
   const [unit, setUnit] = useState<"port" | "lop">("port");
@@ -198,6 +328,20 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
 
     return { items: result, total: totalWithKendala };
   }, [data, isPort]);
+
+  const finishStatusData = useMemo(() => {
+    const distribution = buildFinishStatusDistribution(data, unit);
+    return {
+      ...distribution,
+      items: distribution.items.map((item, index) => ({
+        ...item,
+        color:
+          item.name === "Status Lainnya"
+            ? "#94a3b8"
+            : PIE_COLORS[index % PIE_COLORS.length],
+      })),
+    };
+  }, [data, unit]);
 
   return (
     <div className="space-y-4">
@@ -614,100 +758,22 @@ export function KonstruksiTab({ data }: KonstruksiTabProps) {
           </CardContent>
         </Card>
 
-        {/* 4. Kendala Distribution Donut Chart */}
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-bold text-slate-800 flex items-center justify-between">
-              <span>Drop / Kendala ({unitLabel})</span>
-              <span className="text-xs font-normal text-slate-500">
-                {formatNumber(kendalaData.total)} {unitLabel} Drop / Kendala
-              </span>
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-500">
-              Pengelompokan jenis kendala pada proyek berstatus Drop &amp; Propose Drop
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <div className="h-[420px] w-full flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="h-[280px] w-full md:w-1/2 relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const d = payload[0].payload;
-                          const pct =
-                            kendalaData.total > 0 ? (d.value / kendalaData.total) * 100 : 0;
-                          return (
-                            <div className="bg-slate-900 text-white text-xs rounded-lg p-2.5 shadow-xl border border-slate-700 max-w-xs">
-                              <p className="font-semibold text-slate-200">{d.name}</p>
-                              <p className="text-blue-400 font-bold mt-1 text-sm">
-                                {formatNumber(d.value)} {unitLabel} ({formatPercent(pct)})
-                              </p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Pie
-                      data={kendalaData.items}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={65}
-                      outerRadius={105}
-                      paddingAngle={2}
-                      isAnimationActive={false}
-                    >
-                      {kendalaData.items.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Center Donut Label */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-xl font-bold text-slate-800">
-                    {formatNumber(kendalaData.total)}
-                  </span>
-                  <span className="text-[11px] text-slate-500">Total {unitLabel}</span>
-                </div>
-              </div>
-
-              {/* Custom Legend List */}
-              <div className="w-full md:w-1/2 space-y-2 max-h-[380px] overflow-y-auto pr-2">
-                {kendalaData.items.map((item, idx) => {
-                  const pct =
-                    kendalaData.total > 0 ? (item.value / kendalaData.total) * 100 : 0;
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50/80 border border-slate-100 hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-2 truncate mr-2">
-                        <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="font-medium text-slate-700 truncate" title={item.name}>
-                          {item.name}
-                        </span>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="font-bold text-slate-900">
-                          {formatNumber(item.value)}
-                        </span>
-                        <span className="text-[11px] text-slate-500 ml-1">
-                          ({formatPercent(pct)})
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <DistributionDonutCard
+          title={`Drop / Kendala (${unitLabel})`}
+          description="Pengelompokan jenis kendala pada proyek berstatus Drop & Propose Drop"
+          summary={`${formatNumber(kendalaData.total)} ${unitLabel} Drop / Kendala`}
+          unitLabel={unitLabel}
+          distribution={kendalaData}
+        />
+        <DistributionDonutCard
+          title="Finish Instalasi – Status FI NY Golive"
+          description="Pengelompokan status menuju Go Live pada proyek berstatus 04. Finish Instalasi"
+          summary={`${formatNumber(finishStatusData.total)} ${unitLabel} Finish Instalasi`}
+          unitLabel={unitLabel}
+          distribution={finishStatusData}
+          emptyMessage="Tidak ada data Finish Instalasi"
+          className="lg:col-span-2"
+        />
       </div>
     </div>
   );

@@ -269,7 +269,11 @@ export function parseCsvString(csvContent: string): {
     [20, "Status Konstruksi", (header) => header.startsWith("status kon")],
     [21, "Status Material", (header) => header === "status material"],
     [25, "Plan GL", (header) => header === "plan gl"],
-    [30, "Status GL", (header) => header === "status gl"],
+    [27, "Status FI NY Golive", (header) => header === "status fi ny golive"],
+    [28, "Keterangan", (header) => header === "keterangan"],
+    [30, "Status GD TA", (header) => header === "status gd ta"],
+    [31, "Status GL", (header) => header === "status gl"],
+    [32, "Plan GL xl", (header) => header === "plan gl xl"],
   ];
   const invalidColumn = requiredColumns.find(
     ([index, , matches]) => !matches(headers[index] || "")
@@ -292,7 +296,7 @@ export function parseCsvString(csvContent: string): {
   const startRow = headerIndex + 1;
   for (let i = startRow; i < rows.length; i++) {
     const row = rows[i];
-    if (!row || row.length < 32) continue;
+    if (!row || row.length < 33) continue;
 
     const rawId = cleanString(row[0]);
     if (!rawId || rawId.toLowerCase().includes("ihld")) continue;
@@ -345,10 +349,11 @@ export function parseCsvString(csvContent: string): {
       statusMaterial: cleanString(row[21]),
       planGL: parseDateToIso(row[25]),
       groupingKendala: cleanString(row[26]),
-      keterangan: cleanString(row[27]),
-      statusGdTa: cleanString(row[29]),
-      statusGL: cleanString(row[30]),
-      planGLxl: parsePlanGLxl(row[31]),
+      statusFiNyGolive: cleanString(row[27]),
+      keterangan: cleanString(row[28]),
+      statusGdTa: cleanString(row[30]),
+      statusGL: cleanString(row[31]),
+      planGLxl: parsePlanGLxl(row[32]),
       planEta: parseEtaDate(row[24]),
     });
   }

@@ -26,6 +26,7 @@ const record: LopRecord = {
   planGLxl: "2026-09-24",
   planEta: "23/09",
   groupingKendala: "Izin, ROW",
+  statusFiNyGolive: "",
   keterangan: "Hidden note",
   cekWo: "Sudah WO",
 };
