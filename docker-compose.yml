@@ -1,5 +1,6 @@
 services:
   app:
+    container_name: lop-priority-app
     image: ${APP_IMAGE:-lop-priority:local}
     build:
       context: .
