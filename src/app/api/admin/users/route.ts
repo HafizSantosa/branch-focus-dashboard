@@ -17,11 +17,17 @@ function safeUser(user: DbUser) {
     password: _password,
     verification_token: _verificationToken,
     verification_expires: _verificationExpires,
+    password_reset_token_hash: _passwordResetTokenHash,
+    password_reset_expires: _passwordResetExpires,
+    session_version: _sessionVersion,
     ...safe
   } = user;
   void _password;
   void _verificationToken;
   void _verificationExpires;
+  void _passwordResetTokenHash;
+  void _passwordResetExpires;
+  void _sessionVersion;
   return safe;
 }
 

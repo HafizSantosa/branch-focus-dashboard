@@ -67,11 +67,14 @@ export default function AdminUsersPage() {
   }, []);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (
+      status === "unauthenticated" ||
+      (status === "authenticated" && session.user.authenticated === false)
+    ) {
       router.push("/login");
       return;
     }
-    if (status !== "authenticated") return;
+    if (status !== "authenticated" || session.user.authenticated !== true) return;
     if (session.user.role !== "admin") {
       router.push("/");
       return;
@@ -182,7 +185,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || session?.user?.authenticated === false || loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />

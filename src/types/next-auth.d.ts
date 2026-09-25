@@ -12,6 +12,7 @@ declare module "next-auth" {
       image?: string | null;
       role: UserRole;
       authenticated: boolean;
+      sessionVersion: number;
     };
   }
 }
@@ -20,5 +21,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     role?: UserRole;
     authenticated?: boolean;
+    sessionVersion?: number;
   }
 }

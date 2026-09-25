@@ -17,12 +17,11 @@ export default function ChangePasswordPage() {
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
 
-  if (status === "loading") return null;
+  if (status === "loading" || session?.user?.authenticated === false) return null;
   if (status === "unauthenticated") {
     router.push("/login");
     return null;
   }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);

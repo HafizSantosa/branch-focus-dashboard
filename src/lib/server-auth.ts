@@ -12,7 +12,11 @@ export async function getCurrentUser(
   if (!id || !activeSession.user.authenticated) return null;
 
   const user = userDb.findById(id);
-  if (!user?.active || !user.email_verified) return null;
+  if (
+    !user?.active ||
+    !user.email_verified ||
+    (activeSession?.user.sessionVersion ?? 0) !== user.session_version
+  ) return null;
   return user;
 }
 
