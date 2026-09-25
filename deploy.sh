@@ -3,23 +3,22 @@ set -euo pipefail
 
 APP_DIR="$HOME/lop-dashboard"
 REPO="https://github.com/HafizSantosa/branch-focus-dashboard.git"
-BRANCH="feature/rbac"
+BRANCH="main"
+
+if [ -e "$APP_DIR" ]; then
+  echo "Refusing to overwrite existing installation at $APP_DIR." >&2
+  echo "Use GitHub Actions CI/CD or scripts/deploy-image.sh for image rollouts." >&2
+  exit 1
+fi
 
 echo ""
 echo "=== LOP Dashboard Deployment ==="
 echo ""
 
 # ── 1. Clone ─────────────────────────────────────────────
-if [ -d "$APP_DIR" ]; then
-  echo "[1/6] Updating existing repo..."
-  cd "$APP_DIR"
-  git fetch origin "$BRANCH"
-  git reset --hard "origin/$BRANCH"
-else
-  echo "[1/6] Cloning repository..."
-  git clone -b "$BRANCH" "$REPO" "$APP_DIR"
-  cd "$APP_DIR"
-fi
+echo "[1/6] Cloning repository..."
+git clone -b "$BRANCH" "$REPO" "$APP_DIR"
+cd "$APP_DIR"
 
 # ── 2. Create .env ──────────────────────────────────────
 if [ ! -f .env ]; then
@@ -53,7 +52,7 @@ fi
 
 # ── 3. Build and start ──────────────────────────────────
 echo "[3/6] Building and starting container..."
-docker compose up -d --build
+docker compose --project-name lop-dashboard up -d --build
 
 echo "[3/6] Waiting for healthy container..."
 for i in $(seq 1 20); do
@@ -73,7 +72,7 @@ read -rp "Admin username: " ADMIN_USER < /dev/tty
 read -rp "Admin email: " ADMIN_EMAIL < /dev/tty
 read -rsp "Admin password (min 12 chars): " ADMIN_PASS < /dev/tty && echo
 
-docker compose exec -T \
+docker compose --project-name lop-dashboard exec -T \
   -e ADMIN_USERNAME="$ADMIN_USER" \
   -e ADMIN_EMAIL="$ADMIN_EMAIL" \
   -e ADMIN_PASSWORD="$ADMIN_PASS" \

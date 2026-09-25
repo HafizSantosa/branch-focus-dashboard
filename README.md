@@ -60,14 +60,22 @@ Production Compose refuses to start without `NEXTAUTH_URL` and `NEXTAUTH_SECRET`
 
 ## VPS deployment
 
-### 1. Build and start
+### 1. First installation and automated releases
+
+Create the VPS checkout at `$HOME/lop-dashboard`, configure its private `.env`, and use the Compose project name `lop-dashboard` so the persistent volume is `lop-dashboard_app-data`:
 
 ```bash
+git clone -b main https://github.com/HafizSantosa/branch-focus-dashboard.git "$HOME/lop-dashboard"
+cd "$HOME/lop-dashboard"
 cp .env.example .env
 # Edit .env with the real HTTPS origin, random secret, and SMTP credentials.
-docker compose up -d --build
-docker compose ps
+docker compose --project-name lop-dashboard up -d --build
+docker compose --project-name lop-dashboard ps
 ```
+
+For automated releases, configure the `production` GitHub environment with `VPS_SSH_PRIVATE_KEY` and the independently verified `VPS_SSH_KNOWN_HOSTS` secrets, plus `VPS_HOST`, `VPS_USER`, and optional `VPS_PORT` variables. Give the VPS deploy user's Docker credential store a classic GitHub token with only `read:packages`; keep the GHCR package private. Merging a CI-passing pull request to `main` publishes an immutable image and deploys that digest over SSH. Do not use `docker compose down -v`; it deletes the database and local CSV backups.
+The SSH account must have Docker access and this checkout must remain free of tracked local edits. Verify the VPS host-key fingerprint out of band before storing `VPS_SSH_KNOWN_HOSTS`; never populate it with an unverified `ssh-keyscan`. Restrict the production environment to `main` and protect `main` by requiring the `ci` check. Configure these safeguards and confirm the existing Compose project/container/volume before the first merge; do not point the workflow at an unrecognized data volume.
+
 
 The application binds to `127.0.0.1:3001` by default. Expose only the reverse proxy on public ports 80/443.
 
@@ -77,7 +85,7 @@ The health check initializes the SQLite schema. Create the first account after t
 
 ```bash
 read -rsp "Admin password: " ADMIN_PASSWORD && echo
-docker compose exec \
+docker compose --project-name lop-dashboard exec \
   -e ADMIN_USERNAME=admin \
   -e ADMIN_EMAIL=admin@example.com \
   -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
@@ -108,17 +116,17 @@ Terminate TLS at Nginx or another trusted reverse proxy. Keep `TRUST_PROXY=false
 
 ```bash
 # Health and status
-docker compose ps
+docker compose --project-name lop-dashboard ps
 curl --fail http://127.0.0.1:3001/api/health
 
 # Logs
-docker compose logs -f app
+docker compose --project-name lop-dashboard logs -f app
 
-# Upgrade
-docker compose up -d --build
+# Releases are deployed by GitHub Actions after a passing main merge.
+# Never use --build on the VPS for an automated release.
 
-# Stop
-docker compose down
+# Stop (preserves persistent data)
+docker compose --project-name lop-dashboard down
 ```
 
 ### Backup
