@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildFinishStatusDistribution,
   buildConstructionPipeline,
   buildKpiMetrics,
   createDefaultFilterState,
@@ -126,4 +127,73 @@ test("Port Go Live counts Port Real even when construction status is not Go Live
   assert.equal(metrics.goLivePort, 64);
   assert.equal(metrics.goLiveLop, 1);
   assert.equal(metrics.totalPortReal, 64);
+});
+test("Finish Instalasi status distribution counts Port and LOP and normalizes missing statuses", () => {
+  const data = [
+    { statusKonstruksi: "04. Finish Instalasi", statusFiNyGolive: "Belum Ada Jadwal Integrasi", portPlan: 24 },
+    { statusKonstruksi: "04. Finish Instalasi", statusFiNyGolive: "Belum Ada Jadwal Integrasi", portPlan: 48 },
+    { statusKonstruksi: "04. Finish Instalasi", statusFiNyGolive: "  ", portPlan: 8 },
+    { statusKonstruksi: "01. Persiapan", statusFiNyGolive: "Belum Ada Jadwal Integrasi", portPlan: 100 },
+  ];
+
+  assert.deepEqual(buildFinishStatusDistribution(data, "port"), {
+    items: [
+      { name: "Belum Ada Jadwal Integrasi", value: 72 },
+      { name: "Status Belum Diisi", value: 8 },
+    ],
+    total: 80,
+  });
+  assert.deepEqual(buildFinishStatusDistribution(data, "lop"), {
+    items: [
+      { name: "Belum Ada Jadwal Integrasi", value: 2 },
+      { name: "Status Belum Diisi", value: 1 },
+    ],
+    total: 3,
+  });
+});
+
+test("Finish Instalasi distribution handles legacy records and combines labels beyond seven", () => {
+  const legacy = {
+    statusKonstruksi: "04. Finish Instalasi",
+    portPlan: 3,
+  } as Parameters<typeof buildFinishStatusDistribution>[0][number];
+  const records = [
+    legacy,
+    ...Array.from({ length: 8 }, (_, index) => ({
+      statusKonstruksi: "04. Finish Instalasi",
+      statusFiNyGolive: `Status ${String(index + 1).padStart(2, "0")}`,
+      portPlan: 10 - index,
+    })),
+  ];
+
+  const result = buildFinishStatusDistribution(records, "port");
+  assert.equal(result.total, 55);
+  assert.deepEqual(result.items.slice(0, 7).map(({ name, value }) => ({ name, value })), [
+    { name: "Status 01", value: 10 },
+    { name: "Status 02", value: 9 },
+    { name: "Status 03", value: 8 },
+    { name: "Status 04", value: 7 },
+    { name: "Status 05", value: 6 },
+    { name: "Status 06", value: 5 },
+    { name: "Status 07", value: 4 },
+  ]);
+  assert.deepEqual(result.items[7], { name: "Status Lainnya", value: 6 });
+  assert.deepEqual(buildFinishStatusDistribution([], "port"), { items: [], total: 0 });
+  assert.deepEqual(
+    buildFinishStatusDistribution(
+      [{ statusKonstruksi: "04. Finish Instalasi", statusFiNyGolive: "", portPlan: 0 }],
+      "port"
+    ),
+    { items: [{ name: "Status Belum Diisi", value: 0 }], total: 0 }
+  );
+  assert.deepEqual(
+    buildFinishStatusDistribution(
+      [
+        { statusKonstruksi: "04. Finish Instalasi", statusFiNyGolive: "Zebra", portPlan: 1 },
+        { statusKonstruksi: "04. Finish Instalasi", statusFiNyGolive: "Alpha", portPlan: 1 },
+      ],
+      "port"
+    ).items.map(({ name }) => name),
+    ["Alpha", "Zebra"]
+  );
 });

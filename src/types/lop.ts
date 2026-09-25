@@ -21,6 +21,7 @@ export interface LopRecord {
   planGLxl: string | null; // ISO date string, or "Done"/"DROP"
   planEta: string | null; // e.g. "20/09", "23/09"
   groupingKendala: string;
+  statusFiNyGolive: string;
   keterangan: string;
   cekWo: string;
 }

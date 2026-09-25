@@ -71,6 +71,37 @@ export function buildConstructionPipeline(
   };
 }
 
+export function buildFinishStatusDistribution(
+  data: readonly Pick<
+    LopRecord,
+    "statusKonstruksi" | "statusFiNyGolive" | "portPlan"
+  >[],
+  unit: "port" | "lop"
+): { items: { name: string; value: number }[]; total: number } {
+  const grouped = new Map<string, number>();
+  let total = 0;
+
+  for (const record of data) {
+    if (record.statusKonstruksi !== "04. Finish Instalasi") continue;
+
+    const value = unit === "lop" ? 1 : record.portPlan;
+    const name = record.statusFiNyGolive?.trim() || "Status Belum Diisi";
+    grouped.set(name, (grouped.get(name) || 0) + value);
+    total += value;
+  }
+
+  const sorted = [...grouped.entries()]
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  const visibleItems = sorted.slice(0, 7);
+  const remainder = sorted.slice(7).reduce((sum, item) => sum + item.value, 0);
+  if (remainder > 0) {
+    visibleItems.push({ name: "Status Lainnya", value: remainder });
+  }
+
+  return { items: visibleItems, total };
+}
+
 export function getDefaultPrioFlags(
   availableFlags?: readonly string[] | null
 ): string[] {

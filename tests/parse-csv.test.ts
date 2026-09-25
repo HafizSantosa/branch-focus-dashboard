@@ -33,6 +33,7 @@ const headers = [
   "Plan ETA",
   "Plan GL",
   "Grouping Kendala",
+  "Status FI NY Golive",
   "Keterangan",
   "",
   "Status GD TA",
@@ -57,10 +58,14 @@ function createCsv(headerRow = headers): string {
   row[13] = "Prio September";
   row[17] = "Y";
   row[18] = "20 Branch";
-  row[20] = "02. Matdel";
+  row[20] = "04. Finish Instalasi";
   row[21] = "Ready";
   row[25] = "21/09/2026";
-  row[30] = "00. Ny Golive";
+  row[27] = "Belum Ada Jadwal Integrasi";
+  row[28] = "Keterangan sentinel";
+  row[30] = "GD sentinel";
+  row[31] = "00. Ny Golive";
+  row[32] = "Done";
   return `${headerRow.join(",")}\n${row.join(",")}`;
 }
 
@@ -83,14 +88,15 @@ test("parses the expected spreadsheet contract", () => {
     activeFlag: "",
     branchFokus: true,
     prioritas20Branch: "20 Branch",
-    statusKonstruksi: "02. Material Delivery",
+    statusKonstruksi: "04. Finish Instalasi",
     statusMaterial: "Ready",
     planGL: "2026-09-21",
     groupingKendala: "",
-    keterangan: "",
-    statusGdTa: "",
+    statusFiNyGolive: "Belum Ada Jadwal Integrasi",
+    keterangan: "Keterangan sentinel",
+    statusGdTa: "GD sentinel",
     statusGL: "00. Ny Golive",
-    planGLxl: null,
+    planGLxl: "Done",
     planEta: null,
   });
 });
@@ -102,6 +108,26 @@ test("rejects a shifted spreadsheet schema instead of silently corrupting fields
     () => parseCsvString(createCsv(changedHeaders)),
     /kolom 3 harus berisi "Port Plan"/
   );
+});
+test("rejects an absent or shifted Finish Instalasi status column", () => {
+  const missingColumn = [...headers];
+  missingColumn.splice(27, 1);
+  assert.throws(
+    () => parseCsvString(createCsv(missingColumn)),
+    /kolom 28 harus berisi "Status FI NY Golive"/
+  );
+
+  const shiftedColumn = [...headers];
+  shiftedColumn[27] = "Unexpected Column";
+  assert.throws(
+    () => parseCsvString(createCsv(shiftedColumn)),
+    /kolom 28 harus berisi "Status FI NY Golive"/
+  );
+});
+
+test("maps an empty Finish Instalasi status cell to an empty string", () => {
+  const csv = createCsv().replace("Belum Ada Jadwal Integrasi", "");
+  assert.equal(parseCsvString(csv).records[0].statusFiNyGolive, "");
 });
 
 test("preserves a selected Google Sheet gid in its CSV export URL", () => {
