@@ -49,7 +49,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo / Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-slate-900 border border-slate-700/50 shadow-lg shadow-slate-900/20 mb-4 overflow-hidden p-1.5">
+          <div className="inline-flex items-center justify-center w-14 h-14 mb-4">
             <Image src="/logo.png" alt="TDSC Logo" width={56} height={56} className="w-full h-full object-contain" />
           </div>
           <h1 className="text-xl font-bold text-slate-800 tracking-tight">
