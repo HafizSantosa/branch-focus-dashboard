@@ -439,7 +439,7 @@ export function Dashboard({
             </div>
 
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden shrink-0 bg-slate-900 border border-slate-700/40 shadow-2xs flex items-center justify-center p-0.5">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 flex items-center justify-center">
                 <Image src="/logo.png" alt="TDSC Logo" width={32} height={32} className="w-full h-full object-contain" />
               </div>
               <div className="min-w-0">
